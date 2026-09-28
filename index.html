@@ -134,6 +134,11 @@
   .btn-primary:hover{background:var(--hero-grad);filter:brightness(1.1) saturate(1.05);}
   .btn-sm{padding:10px 18px;font-size:0.9rem;border-radius:12px;}
   .icon-btn{width:42px;height:42px;padding:0;border-radius:12px;}
+  .btn-quiet{background:transparent;box-shadow:none;border-color:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;color:var(--text-mid);}
+  .btn-quiet:hover{background:var(--hover-surface);color:var(--text-hi);}
+  .btn.busy{opacity:0.7;pointer-events:none;}
+  .faq code{font:500 0.85em ui-monospace,Consolas,monospace;padding:2px 6px;border-radius:6px;background:var(--recess);border:1px solid var(--hairline);color:var(--text-hi);}
+  .faq b{color:var(--text-hi);font-weight:600;}
 
   /* ---------- nav ---------- */
   .nav{position:sticky;top:0;z-index:50;background:var(--nav-bg);border-bottom:1px solid transparent;
@@ -149,6 +154,8 @@
   .nav-cta{display:flex;align-items:center;gap:10px;}
   .wm .wm-un{fill:var(--wm-un);}
   @media (max-width:900px){ .nav-links{display:none;} }
+  @media (max-width:640px){ .nav .btn-dl .dl-label{display:none;} .nav .btn-dl{width:42px;padding:0;} }
+  @media (max-width:520px){ .nav .btn-dl{display:none;} }
   @media (max-width:420px){ .nav-inner{gap:10px;} .logo .wm{height:17px;} .logo .emblem{height:32px;} .nav .btn-sm{padding:9px 14px;font-size:0.85rem;} }
 
   /* ---------- hero ---------- */
@@ -375,6 +382,7 @@
     </nav>
     <div class="nav-cta">
       <button class="btn icon-btn" id="themeBtn" type="button" aria-label="Switch between light and dark theme"><svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+      <a class="btn btn-sm btn-dl" href="app/index.html" download="undupe.html" data-download title="Download Undupe as a single file you can run offline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 21h14"/></svg><span class="dl-label">Download</span></a>
       <a class="btn btn-primary btn-sm" href="app/">Launch app</a>
     </div>
   </div>
@@ -388,9 +396,10 @@
     <p class="lead">Undupe finds the exact duplicate files hiding across your drives, lets you choose which copy survives, and rebuilds everything into a tidy, organized folder. Nothing is uploaded. Nothing to install.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="app/">Launch Undupe <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-      <a class="btn" href="#how">See how it works</a>
+      <a class="btn" href="app/index.html" download="undupe.html" data-download title="Download Undupe as a single file you can run offline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 21h14"/></svg> Download app</a>
+      <a class="btn btn-quiet" href="#how">See how it works</a>
     </div>
-    <p class="hero-note">Works in Chrome and Edge on desktop.</p>
+    <p class="hero-note">Works in Chrome and Edge on desktop. Launch it online, or download it as one file and run it offline.</p>
     <div class="compat" id="compat" role="note"><strong>Heads up:</strong> this browser can't open folders on your drive, which Undupe needs. Open this page in Chrome or Edge on a computer to use the app.</div>
 
     <div class="hero-visual">
@@ -612,6 +621,7 @@
       <details><summary>My file dates are wrong because my backups reset them.</summary><div class="a">The viewer can read the real capture date from JPEG photos (EXIF) and sort by it, along with camera model and dimensions. Other formats fall back to the file date.</div></details>
       <details><summary>How big an archive can it handle?</summary><div class="a">It's built with large archives in mind: tiered fingerprinting, background workers, and chunked hashing for huge files. Scan speed is mostly limited by how fast your drive can be read. Start with a small folder to see how it behaves on your hardware.</div></details>
       <details><summary>Why doesn't it work in Firefox or Safari?</summary><div class="a">They don't support the browser feature that lets a web page work with real folders on your drive. Chrome and Edge on desktop do.</div></details>
+      <details><summary>Can I run it from my computer, without the website?</summary><div class="a">Yes. Press <b>Download app</b> to save <code>undupe.html</code>, a single self-contained file with its fonts and icons built in. Double-click it (or drag it into Chrome or Edge) and it runs offline, with no server and no internet needed. A downloaded copy can't be installed as a desktop app; for that, use the online version. To update, just download it again.</div></details>
       <details><summary>Is it free?</summary><div class="a">Yes.</div></details>
     </div>
   </div>
@@ -622,7 +632,7 @@
     <div class="card final reveal">
       <h2>Ready to <span class="grad-text">clean up?</span></h2>
       <p>Start with a small folder to see how it works. It takes about a minute.</p>
-      <div class="cta-row"><a class="btn btn-primary" href="app/">Launch Undupe <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+      <div class="cta-row"><a class="btn btn-primary" href="app/">Launch Undupe <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn" href="app/index.html" download="undupe.html" data-download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 21h14"/></svg> Download app</a></div>
     </div>
   </div>
 </section>
@@ -653,7 +663,7 @@
   <path d="M 40 350 L 58 368 L 92 330" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </svg><svg class="wm" viewBox="40 -714 4022 727" role="img" aria-label="Undupe" focusable="false"><path class="wm-un" d="M267 -708V-309Q267 -260 288.5 -231.5Q310 -203 358 -203Q406 -203 429 -231.5Q452 -260 452 -309V-708H673V-309Q673 -208 631 -136.5Q589 -65 516 -29Q443 7 353 7Q263 7 193.5 -29Q124 -65 85 -136Q46 -207 46 -309V-708ZM1433 0H1211L976 -356V0H754V-708H976L1211 -346V-708H1433Z"/><path fill="url(#wm-grad)" d="M2181 -356Q2181 -255 2136 -174Q2091 -93 2007.5 -46.5Q1924 0 1813 0H1518V-708H1813Q1924 -708 2007.5 -663Q2091 -618 2136 -538Q2181 -458 2181 -356ZM1956 -356Q1956 -432 1912 -473Q1868 -514 1793 -514H1740V-198H1793Q1868 -198 1912 -239Q1956 -280 1956 -356ZM2463 -708V-309Q2463 -260 2484.5 -231.5Q2506 -203 2554 -203Q2602 -203 2625 -231.5Q2648 -260 2648 -309V-708H2869V-309Q2869 -208 2827 -136.5Q2785 -65 2712 -29Q2639 7 2549 7Q2459 7 2389.5 -29Q2320 -65 2281 -136Q2242 -207 2242 -309V-708ZM3260 -225H3172V0H2950V-708H3260Q3390 -708 3459.5 -642Q3529 -576 3529 -465Q3529 -398 3498 -343.5Q3467 -289 3406.5 -257Q3346 -225 3260 -225ZM3304 -465Q3304 -530 3235 -530H3172V-400H3235Q3304 -400 3304 -465ZM3806 -531V-444H4026V-277H3806V-177H4056V0H3584V-708H4056V-531Z"/></svg></a>
-    <nav aria-label="Footer"><a href="app/">Launch app</a><a href="#how">How it works</a><a href="#trust">Safety</a><a href="#faq">FAQ</a></nav>
+    <nav aria-label="Footer"><a href="app/">Launch app</a><a href="app/index.html" download="undupe.html" data-download>Download</a><a href="#how">How it works</a><a href="#trust">Safety</a><a href="#faq">FAQ</a></nav>
     <small>Made by LAZLAB Creations</small>
   </div>
 </footer>
@@ -687,6 +697,37 @@
     t.addEventListener('click',function(){ select(t.id.slice(2)); });
     t.addEventListener('keydown',function(e){ var n=null; if(e.key==='ArrowRight')n=tabs[(i+1)%tabs.length]; if(e.key==='ArrowLeft')n=tabs[(i-1+tabs.length)%tabs.length];
       if(n){ e.preventDefault(); n.focus(); select(n.id.slice(2)); } }); });
+  /* download: build a self-contained copy of the app (fonts embedded) so it runs from a local file */
+  function toDataUrl(blob){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){res(r.result);}; r.onerror=rej; r.readAsDataURL(blob); }); }
+  function save(blob,name){ var u=URL.createObjectURL(blob), a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},4000); }
+  async function buildStandalone(){
+    var get=function(u){ return fetch(u,{cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(u+' '+r.status); return r; }); };
+    var parts=await Promise.all([get('app/index.html').then(function(r){return r.text();}),
+      get('app/dm-sans.woff2').then(function(r){return r.arrayBuffer();}), get('app/playfair-display.woff2').then(function(r){return r.arrayBuffer();}),
+      get('app/favicon.svg').then(function(r){return r.text();})]);
+    var dm=await toDataUrl(new Blob([parts[1]],{type:'font/woff2'})), pf=await toDataUrl(new Blob([parts[2]],{type:'font/woff2'}));
+    var fav='data:image/svg+xml,'+encodeURIComponent(parts[3].replace(/\s+/g,' ').trim());
+    var out=parts[0]
+      .replace('url(dm-sans.woff2)',function(){return 'url('+dm+')';})
+      .replace('url(playfair-display.woff2)',function(){return 'url('+pf+')';})
+      .replace(/<link rel="preload"[^>]*>\s*/g,'')
+      .replace(/<link rel="manifest"[^>]*>\s*/,'')
+      .replace(/<link rel="apple-touch-icon"[^>]*>\s*/,'')
+      .replace(/<link rel="icon" href="favicon-32\.png"[^>]*>\s*/,'')
+      .replace(/<link rel="icon" href="favicon\.svg"[^>]*>/,function(){return '<link rel="icon" href="'+fav+'" type="image/svg+xml">';});
+    if(/dm-sans\.woff2|playfair-display\.woff2/.test(out)) throw new Error('font embed failed');
+    return new Blob(['<!DOCTYPE html>\n<!-- Undupe standalone build: one file, no server, no internet needed. Open it in Chrome or Edge. -->\n'+out.replace(/^<!DOCTYPE html>\s*/i,'')],{type:'text/html'});
+  }
+  document.querySelectorAll('[data-download]').forEach(function(a){
+    a.addEventListener('click',async function(e){
+      if(a.classList.contains('busy')) { e.preventDefault(); return; }
+      e.preventDefault(); var label=a.querySelector('.dl-label')||a, old=label.textContent; a.classList.add('busy');
+      if(a.querySelector('.dl-label')===null) a.lastChild.textContent=' Preparing\u2026'; else label.textContent='Preparing\u2026';
+      try{ save(await buildStandalone(),'undupe.html'); }
+      catch(err){ var f=document.createElement('a'); f.href='app/index.html'; f.download='undupe.html'; document.body.appendChild(f); f.click(); f.remove(); }
+      finally{ a.classList.remove('busy'); if(a.querySelector('.dl-label')===null) a.lastChild.textContent=' Download app'; else label.textContent=old; }
+    });
+  });
   /* browser support hint */
   if(!window.showDirectoryPicker) $('#compat').classList.add('show');
 })();
