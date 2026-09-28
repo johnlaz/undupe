@@ -2,1047 +2,693 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Undupe — Years of Backups. One Clean Archive.</title>
-<meta name="description" content="Find exact duplicate files hiding across your drives, keep what matters, and organize the rest. Runs 100% in your browser with zero uploads and complete privacy.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Undupe: find duplicate files and clean up years of backups</title>
+<meta name="description" content="Undupe finds the exact duplicate files hiding across your drives, lets you choose which copy survives, and rebuilds everything into a tidy folder. It runs entirely in your browser: nothing is uploaded.">
 <meta name="theme-color" id="themeColorMeta" content="#070b14">
 <meta name="color-scheme" content="dark light">
-
-<!-- Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
-
-<!-- Tailwind CSS CDN -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    darkMode: ['class', '[data-theme="dark"]'],
-    theme: {
-      extend: {
-        fontFamily: {
-          sans: ['DM Sans', 'system-ui', 'sans-serif'],
-          serif: ['Playfair Display', 'Georgia', 'serif'],
-        },
-        colors: {
-          brand: {
-            purple: '#a855f7',
-            brightPurple: '#c084fc',
-            deepPurple: '#7c3aed',
-            rose: '#e11d48',
-            sky: '#38bdf8',
-            emerald: '#34d399',
-            danger: '#e0685f'
-          }
-        }
-      }
-    }
-  }
+<link rel="icon" href="app/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="app/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="app/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Undupe: years of backups, one clean archive">
+<meta property="og:description" content="Find exact duplicates across your drives, keep the copy you want, and organize the rest. Runs in your browser. Nothing uploaded.">
+<meta property="og:image" content="https://johnlaz.github.io/undupe/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Undupe: years of backups, one clean archive">
+<meta name="twitter:description" content="Find exact duplicates across your drives, keep the copy you want, and organize the rest. Runs in your browser. Nothing uploaded.">
+<meta name="twitter:image" content="https://johnlaz.github.io/undupe/og-image.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Undupe","applicationCategory":"UtilitiesApplication","operatingSystem":"Chrome or Edge on desktop","description":"Finds exact duplicate files across drives and organizes the rest into a clean folder. Runs entirely in the browser.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
 </script>
-
+<script>
+/* set the theme before first paint (shares its preference with the app) */
+(function(){
+  var t=null; try{ t=localStorage.getItem('archiveSanitizerTheme'); }catch(e){}
+  if(!t) t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  document.documentElement.classList.add('js');
+})();
+</script>
+<link rel="preload" href="app/dm-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="app/playfair-display.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  :root {
-    color-scheme: dark;
-    --bg-deep: #070b14;
-    --panel-solid: #111828;
-    --text-hi: #f1f3fa;
-    --text-mid: #aab4ca;
-    --text-low: #7c87a1;
-    --accent: #a855f7;
-    --accent-bright: #c084fc;
-    --accent-deep: #7c3aed;
-    --accent-rgb: 168, 85, 247;
-    --accent2: #38bdf8;
-    --accent2-bright: #7dd3fc;
-    --success: #34d399;
-    --success-rgb: 52, 211, 153;
-    --danger: #e0685f;
-    --hero-grad: linear-gradient(135deg, #a855f7 0%, #e11d48 100%);
-    --bar-grad: linear-gradient(90deg, #a855f7 0%, #ec4899 55%, #38bdf8 100%);
-    
-    /* Glass tokens */
-    --glass: linear-gradient(150deg, rgba(255, 255, 255, 0.085) 0%, rgba(255, 255, 255, 0.028) 100%);
-    --glass-strong: linear-gradient(150deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 100%);
-    --glass-edge: rgba(255, 255, 255, 0.11);
-    --glass-edge-hi: rgba(255, 255, 255, 0.24);
-    --glass-shadow: 0 28px 60px -28px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.25);
-    --inset-hi: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    --recess: rgba(4, 7, 16, 0.45);
-    --inset-recess: inset 0 1px 3px rgba(0, 0, 0, 0.4);
-    --hover-surface: rgba(255, 255, 255, 0.07);
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:100 1000;font-display:swap;src:url(app/dm-sans.woff2) format('woff2');}
+  @font-face{font-family:'Playfair Display';font-style:normal;font-weight:400 900;font-display:swap;src:url(app/playfair-display.woff2) format('woff2');}
 
-    /* Ambient Background Orbs */
+  /* ---------- tokens (same system as the app) ---------- */
+  :root{
+    color-scheme:dark;
+    --bg-deep:#070b14; --panel-solid:#111828;
+    --text-hi:#f1f3fa; --text-mid:#aab4ca; --text-low:#8792ab;
+    --accent:#a855f7; --accent-bright:#c084fc; --accent-deep:#7c3aed; --accent-rgb:168,85,247;
+    --accent2:#38bdf8; --accent2-bright:#7dd3fc; --accent2-rgb:56,189,248;
+    --success:#34d399; --success-rgb:52,211,153;
+    --hero-grad:linear-gradient(135deg,#a855f7 0%,#e11d48 100%); --hero-rgb:225,29,72;
+    --grad-text:linear-gradient(92deg,#c084fc 0%,#f472b6 55%,#7dd3fc 100%);
+    --glass:linear-gradient(150deg,rgba(255,255,255,0.085) 0%,rgba(255,255,255,0.028) 100%);
+    --glass-strong:linear-gradient(150deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.05) 100%);
+    --glass-edge:rgba(255,255,255,0.11); --glass-edge-hi:rgba(255,255,255,0.24);
+    --glass-shadow:0 30px 70px -30px rgba(0,0,0,0.8),0 2px 6px rgba(0,0,0,0.25);
+    --inset-hi:inset 0 1px 0 rgba(255,255,255,0.14);
+    --hairline:rgba(255,255,255,0.08);
+    --recess:rgba(4,7,16,0.38);
+    --hover-surface:rgba(255,255,255,0.07);
+    --nav-bg:rgba(9,13,24,0.62);
     --orbs:
-      radial-gradient(900px 640px at 6% 10%, rgba(168, 85, 247, 0.28), transparent 62%),
-      radial-gradient(760px 560px at 16% 80%, rgba(236, 72, 153, 0.13), transparent 60%),
-      radial-gradient(860px 620px at 94% 90%, rgba(56, 189, 248, 0.17), transparent 60%),
-      radial-gradient(700px 500px at 90% 6%, rgba(99, 102, 241, 0.11), transparent 60%);
-    --grid: rgba(148, 163, 196, 0.065);
-    --wm-un: #ffffff;
-    --wm-g1: #c084fc;
-    --wm-g2: #a855f7;
-    --wm-g3: #f43f5e;
+      radial-gradient(1000px 700px at 6% 4%,rgba(168,85,247,0.30),transparent 62%),
+      radial-gradient(800px 600px at 96% 22%,rgba(56,189,248,0.14),transparent 60%),
+      radial-gradient(900px 700px at 12% 62%,rgba(236,72,153,0.11),transparent 60%),
+      radial-gradient(900px 700px at 92% 96%,rgba(99,102,241,0.14),transparent 60%);
+    --grid:rgba(148,163,196,0.06);
+    --wm-un:#ffffff; --wm-g1:#c084fc; --wm-g2:#a855f7; --wm-g3:#f43f5e;
+    --radius:22px;
   }
-
-  html[data-theme="light"] {
-    color-scheme: light;
-    --bg-deep: #f3f1fb;
-    --panel-solid: #ffffff;
-    --text-hi: #151e31;
-    --text-mid: #4b5670;
-    --text-low: #6a7387;
-    --accent: #9333ea;
-    --accent-bright: #7e22ce;
-    --accent-deep: #6b21a8;
-    --accent-rgb: 147, 51, 234;
-    --accent2: #0284c7;
-    --accent2-bright: #0369a1;
-    --success: #059669;
-    --success-rgb: 5, 150, 105;
-    --danger: #c1453c;
-    --hero-grad: linear-gradient(135deg, #9333ea 0%, #e11d48 100%);
-    --bar-grad: linear-gradient(90deg, #9333ea 0%, #db2777 55%, #0ea5e9 100%);
-
-    --glass: linear-gradient(150deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.55) 100%);
-    --glass-strong: linear-gradient(150deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.75) 100%);
-    --glass-edge: rgba(21, 30, 49, 0.09);
-    --glass-edge-hi: rgba(21, 30, 49, 0.2);
-    --glass-shadow: 0 26px 50px -30px rgba(88, 28, 135, 0.25), 0 1px 3px rgba(21, 30, 49, 0.07);
-    --inset-hi: inset 0 1px 0 rgba(255, 255, 255, 0.95);
-    --recess: rgba(21, 30, 49, 0.045);
-    --inset-recess: inset 0 1px 2px rgba(21, 30, 49, 0.09);
-    --hover-surface: rgba(21, 30, 49, 0.055);
-
+  html[data-theme="light"]{
+    color-scheme:light;
+    --bg-deep:#f3f1fb; --panel-solid:#ffffff;
+    --text-hi:#151e31; --text-mid:#4b5670; --text-low:#65708a;
+    --accent:#9333ea; --accent-bright:#7e22ce; --accent-deep:#6b21a8; --accent-rgb:147,51,234;
+    --accent2:#0284c7; --accent2-bright:#0369a1; --accent2-rgb:2,132,199;
+    --success:#059669; --success-rgb:5,150,105;
+    --hero-grad:linear-gradient(135deg,#9333ea 0%,#e11d48 100%);
+    --grad-text:linear-gradient(92deg,#7e22ce 0%,#db2777 55%,#0369a1 100%);
+    --glass:linear-gradient(150deg,rgba(255,255,255,0.8) 0%,rgba(255,255,255,0.48) 100%);
+    --glass-strong:linear-gradient(150deg,rgba(255,255,255,0.96) 0%,rgba(255,255,255,0.72) 100%);
+    --glass-edge:rgba(21,30,49,0.09); --glass-edge-hi:rgba(21,30,49,0.2);
+    --glass-shadow:0 28px 56px -32px rgba(88,28,135,0.4),0 1px 3px rgba(21,30,49,0.07);
+    --inset-hi:inset 0 1px 0 rgba(255,255,255,0.95);
+    --hairline:rgba(21,30,49,0.08);
+    --recess:rgba(21,30,49,0.045);
+    --hover-surface:rgba(21,30,49,0.055);
+    --nav-bg:rgba(243,241,251,0.7);
     --orbs:
-      radial-gradient(900px 640px at 6% 8%, rgba(168, 85, 247, 0.18), transparent 62%),
-      radial-gradient(760px 560px at 16% 82%, rgba(236, 72, 153, 0.09), transparent 60%),
-      radial-gradient(860px 620px at 94% 90%, rgba(56, 189, 248, 0.15), transparent 60%),
-      radial-gradient(700px 500px at 90% 6%, rgba(99, 102, 241, 0.08), transparent 60%);
-    --grid: rgba(21, 30, 49, 0.05);
-    --wm-un: #151e31;
-    --wm-g1: #7e22ce;
-    --wm-g2: #9333ea;
-    --wm-g3: #e11d48;
+      radial-gradient(1000px 700px at 6% 4%,rgba(168,85,247,0.22),transparent 62%),
+      radial-gradient(800px 600px at 96% 22%,rgba(56,189,248,0.20),transparent 60%),
+      radial-gradient(900px 700px at 12% 62%,rgba(236,72,153,0.11),transparent 60%),
+      radial-gradient(900px 700px at 92% 96%,rgba(99,102,241,0.12),transparent 60%);
+    --grid:rgba(21,30,49,0.045);
+    --wm-un:#151e31; --wm-g1:#7e22ce; --wm-g2:#9333ea; --wm-g3:#e11d48;
   }
 
-  body {
-    background-color: var(--bg-deep);
-    color: var(--text-hi);
-    font-family: 'DM Sans', sans-serif;
-    overflow-x: hidden;
-    scroll-behavior: smooth;
+  /* ---------- base ---------- */
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;background:var(--bg-deep);-webkit-text-size-adjust:100%;}
+  body{margin:0;color:var(--text-hi);font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+  body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:var(--orbs);}
+  body::after{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:150px 150px;
+    -webkit-mask-image:radial-gradient(ellipse 85% 60% at 50% 18%,#000 10%,transparent 75%);
+            mask-image:radial-gradient(ellipse 85% 60% at 50% 18%,#000 10%,transparent 75%);
   }
+  h1,h2,h3{font-family:'Playfair Display',Georgia,serif;font-weight:700;line-height:1.12;margin:0;letter-spacing:-0.01em;}
+  p{margin:0;}
+  a{color:var(--accent-bright);}
+  img{max-width:100%;height:auto;}
+  ::selection{background:var(--accent);color:#fff;}
+  :focus-visible{outline:2px solid var(--accent-bright);outline-offset:3px;border-radius:6px;}
+  .container{width:min(1160px,100% - 48px);margin-inline:auto;}
+  .skip{position:absolute;left:-999px;top:8px;z-index:100;padding:8px 14px;border-radius:10px;background:var(--panel-solid);color:var(--text-hi);}
+  .skip:focus{left:12px;}
+  img.only-light{display:none !important;}
+  html[data-theme="light"] img.only-light{display:block !important;}
+  html[data-theme="light"] img.only-dark{display:none !important;}
+  .grad-text{background:var(--grad-text);-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-block;padding-bottom:0.08em;}
 
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    pointer-events: none;
-    background: var(--orbs);
+  /* ---------- buttons ---------- */
+  .btn{
+    position:relative;display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    padding:14px 26px;border-radius:14px;font:600 1rem/1 'DM Sans',sans-serif;text-decoration:none;cursor:pointer;white-space:nowrap;
+    color:var(--text-hi);background:var(--glass);border:1px solid var(--glass-edge);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--inset-hi),0 10px 24px -14px rgba(0,0,0,0.5);
+    transition:transform .14s ease,filter .15s ease,background .15s ease,border-color .15s ease;
   }
+  .btn:hover{transform:translateY(-2px);background:var(--glass-strong);border-color:var(--glass-edge-hi);}
+  .btn svg{width:18px;height:18px;flex-shrink:0;}
+  .btn-primary{color:#fff;border-color:rgba(255,255,255,0.28);text-shadow:0 1px 2px rgba(0,0,0,0.25);
+    background:var(--hero-grad);box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 16px 36px -14px rgba(var(--hero-rgb),0.75);}
+  .btn-primary:hover{background:var(--hero-grad);filter:brightness(1.1) saturate(1.05);}
+  .btn-sm{padding:10px 18px;font-size:0.9rem;border-radius:12px;}
+  .icon-btn{width:42px;height:42px;padding:0;border-radius:12px;}
 
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-    background-size: 140px 140px;
-    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 28%, #000 15%, transparent 78%);
-    mask-image: radial-gradient(ellipse 80% 70% at 50% 28%, #000 15%, transparent 78%);
-  }
+  /* ---------- nav ---------- */
+  .nav{position:sticky;top:0;z-index:50;background:var(--nav-bg);border-bottom:1px solid transparent;
+    -webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);transition:border-color .2s;}
+  .nav.scrolled{border-bottom-color:var(--hairline);}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;gap:20px;height:70px;}
+  .logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+  .logo .emblem{height:38px;width:auto;overflow:visible;}
+  .logo .wm{height:20px;width:auto;display:block;}
+  .nav-links{display:flex;gap:30px;}
+  .nav-links a{color:var(--text-mid);text-decoration:none;font-size:0.95rem;font-weight:500;transition:color .15s;}
+  .nav-links a:hover{color:var(--text-hi);}
+  .nav-cta{display:flex;align-items:center;gap:10px;}
+  .wm .wm-un{fill:var(--wm-un);}
+  @media (max-width:900px){ .nav-links{display:none;} }
+  @media (max-width:420px){ .nav-inner{gap:10px;} .logo .wm{height:17px;} .logo .emblem{height:32px;} .nav .btn-sm{padding:9px 14px;font-size:0.85rem;} }
 
-  .glass-panel {
-    background: var(--glass);
-    border: 1px solid var(--glass-edge);
-    border-radius: 20px;
-    backdrop-filter: blur(28px) saturate(1.5);
-    -webkit-backdrop-filter: blur(28px) saturate(1.5);
-    box-shadow: var(--glass-shadow), var(--inset-hi);
-    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-  }
+  /* ---------- hero ---------- */
+  .hero{padding:76px 0 30px;text-align:center;}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;padding:8px 16px;border-radius:999px;font-size:0.85rem;font-weight:500;color:var(--text-mid);
+    background:var(--glass);border:1px solid var(--glass-edge);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--inset-hi);}
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 10px rgba(var(--success-rgb),0.9);}
+  .hero h1{font-size:clamp(2.7rem,7vw,5.4rem);line-height:1.03;margin:26px auto 0;max-width:18ch;letter-spacing:-0.025em;}
+  .lead{max-width:660px;margin:26px auto 0;font-size:clamp(1.05rem,1.6vw,1.2rem);color:var(--text-mid);}
+  .cta-row{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:38px;}
+  .hero-note{margin-top:18px;font-size:0.88rem;color:var(--text-low);}
+  .compat{display:none;margin:22px auto 0;max-width:560px;padding:12px 18px;border-radius:14px;font-size:0.9rem;text-align:left;
+    background:rgba(224,104,95,0.1);border:1px solid rgba(224,104,95,0.35);color:var(--text-mid);}
+  .compat.show{display:block;}
+  .hero-visual{position:relative;margin:64px auto 0;max-width:1080px;}
+  .hero-visual::before{content:"";position:absolute;inset:8% 6% -6%;z-index:-1;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(var(--accent-rgb),0.42),transparent);filter:blur(30px);}
+  .frame{border-radius:20px;padding:10px;background:var(--glass-strong);border:1px solid var(--glass-edge-hi);
+    box-shadow:0 50px 100px -40px rgba(0,0,0,0.85),var(--inset-hi);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);text-align:left;}
+  .frame-bar{display:flex;align-items:center;gap:8px;padding:6px 8px 12px;}
+  .frame-bar i{width:11px;height:11px;border-radius:50%;background:var(--text-low);opacity:0.45;display:block;}
+  .frame-bar span{margin-left:10px;flex:1;max-width:340px;padding:4px 12px;border-radius:999px;font-size:0.76rem;color:var(--text-low);background:var(--recess);}
+  .frame img{display:block;width:100%;border-radius:12px;}
+  .float{position:absolute;display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:16px;font-size:0.88rem;font-weight:500;text-align:left;
+    background:var(--glass-strong);border:1px solid var(--glass-edge-hi);box-shadow:0 24px 50px -20px rgba(0,0,0,0.7),var(--inset-hi);
+    -webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);}
+  .float small{display:block;font-size:0.75rem;font-weight:400;color:var(--text-low);}
+  .float .badge{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    background:linear-gradient(135deg,#34d399,#059669);box-shadow:0 0 18px rgba(var(--success-rgb),0.5);color:#fff;}
+  .float .badge.violet{background:linear-gradient(135deg,var(--accent),var(--accent-deep));box-shadow:0 0 18px rgba(var(--accent-rgb),0.5);}
+  .float svg{width:18px;height:18px;}
+  .float.f1{left:-28px;bottom:9%;}
+  .float.f2{right:-24px;top:16%;}
+  @media (max-width:1180px){ .float.f1{left:8px;} .float.f2{right:8px;} }
+  @media (max-width:760px){ .float{display:none;} .hero{padding-top:48px;} }
 
-  .glass-panel-hover:hover {
-    transform: translateY(-3px);
-    border-color: var(--glass-edge-hi);
-    box-shadow: 0 35px 70px -25px rgba(0, 0, 0, 0.4), var(--inset-hi);
-  }
+  /* ---------- facts ---------- */
+  .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:64px;}
+  .fact{padding:22px 22px;border-radius:18px;background:var(--glass);border:1px solid var(--glass-edge);box-shadow:var(--inset-hi);text-align:left;}
+  .fact b{display:block;font:700 1.35rem/1.2 'Playfair Display',serif;color:var(--text-hi);}
+  .fact span{display:block;margin-top:4px;font-size:0.9rem;color:var(--text-mid);}
+  @media (max-width:860px){ .facts{grid-template-columns:1fr 1fr;} }
 
-  .recess-box {
-    background: var(--recess);
-    border: 1px solid var(--glass-edge);
-    box-shadow: var(--inset-recess);
-    border-radius: 12px;
-  }
+  /* ---------- sections ---------- */
+  .section{padding:92px 0;scroll-margin-top:60px;}
+  .section-head{max-width:740px;margin:0 auto 52px;text-align:center;}
+  .kicker{display:inline-block;margin-bottom:16px;font-size:0.82rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent-bright);}
+  .section-head h2{font-size:clamp(2rem,4.4vw,3.2rem);}
+  .section-head p{margin-top:18px;font-size:1.1rem;color:var(--text-mid);}
+  .card{position:relative;padding:30px;border-radius:var(--radius);overflow:hidden;background:var(--glass);border:1px solid var(--glass-edge);
+    box-shadow:var(--glass-shadow),var(--inset-hi);-webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);}
+  .card h3{font-size:1.4rem;margin:18px 0 10px;}
+  .card p{color:var(--text-mid);font-size:1rem;}
+  .icon-badge{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--accent-bright);
+    background:rgba(var(--accent-rgb),0.14);border:1px solid rgba(var(--accent-rgb),0.32);}
+  .icon-badge.cyan{color:var(--accent2-bright);background:rgba(var(--accent2-rgb),0.13);border-color:rgba(var(--accent2-rgb),0.32);}
+  .icon-badge.green{color:var(--success);background:rgba(var(--success-rgb),0.13);border-color:rgba(var(--success-rgb),0.32);}
+  .icon-badge svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
-  /* Buttons */
-  .btn-hero {
-    background: var(--hero-grad);
-    color: #ffffff;
-    font-weight: 700;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 12px 28px -12px rgba(225, 29, 72, 0.7);
-    transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
-  }
-  .btn-hero:hover {
-    filter: brightness(1.1) saturate(1.05);
-    transform: translateY(-2px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 16px 36px -10px rgba(225, 29, 72, 0.85);
-  }
+  /* problem */
+  .problem{max-width:820px;margin:0 auto;text-align:center;}
+  .problem h2{font-size:clamp(2rem,4.6vw,3.4rem);}
+  .problem p{margin-top:26px;font-size:1.18rem;color:var(--text-mid);}
+  .problem p strong{color:var(--text-hi);font-weight:600;}
 
-  .btn-glass {
-    background: var(--glass);
-    border: 1px solid var(--glass-edge);
-    color: var(--text-hi);
-    backdrop-filter: blur(12px);
-    box-shadow: var(--inset-hi);
-    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-  }
-  .btn-glass:hover {
-    background: var(--glass-strong);
-    border-color: var(--glass-edge-hi);
-    transform: translateY(-1px);
-  }
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:s;}
+  .step{padding:28px 24px;border-radius:20px;background:var(--glass);border:1px solid var(--glass-edge);box-shadow:var(--inset-hi);}
+  .step .num{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 1.15rem 'Playfair Display',serif;color:#fff;
+    background:linear-gradient(135deg,var(--accent),var(--accent-deep));box-shadow:0 10px 22px -8px rgba(var(--accent-rgb),0.8),inset 0 1px 0 rgba(255,255,255,0.4);}
+  .step h3{font-size:1.3rem;margin:20px 0 8px;}
+  .step p{color:var(--text-mid);font-size:0.96rem;}
+  @media (max-width:980px){ .steps{grid-template-columns:1fr 1fr;} }
+  @media (max-width:560px){ .steps{grid-template-columns:1fr;} }
 
-  .wm-un { fill: var(--wm-un); }
+  /* bento */
+  .bento{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;}
+  .s4{grid-column:span 4;} .s5{grid-column:span 5;} .s6{grid-column:span 6;} .s7{grid-column:span 7;} .s8{grid-column:span 8;}
+  @media (max-width:980px){ .s4,.s5,.s6,.s7,.s8{grid-column:span 12;} }
+  .pipeline{display:flex;align-items:stretch;gap:10px;margin-top:26px;flex-wrap:wrap;}
+  .pipe-step{flex:1;min-width:140px;padding:14px 16px;border-radius:14px;background:var(--recess);border:1px solid var(--hairline);}
+  .pipe-step b{display:block;font-size:0.92rem;color:var(--text-hi);}
+  .pipe-step span{display:block;margin-top:2px;font-size:0.8rem;color:var(--text-low);}
+  .pipe-arrow{display:flex;align-items:center;color:var(--text-low);}
+  .pipe-arrow svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  @media (max-width:640px){ .pipe-arrow{display:none;} }
+  .example-tag{position:absolute;top:18px;right:18px;font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-low);}
+  .clone-mock{margin-top:22px;padding:16px 18px;border-radius:14px;border:1px solid rgba(var(--accent2-rgb),0.38);
+    background:linear-gradient(150deg,rgba(var(--accent2-rgb),0.13),rgba(var(--accent2-rgb),0.03));}
+  .clone-mock .t{font-size:0.92rem;line-height:1.5;}
+  .clone-mock .t strong{color:var(--accent2-bright);font-weight:600;}
+  .clone-mock .m{font-size:0.78rem;color:var(--text-low);margin:4px 0 14px;}
+  .clone-mock .b{display:flex;gap:8px;flex-wrap:wrap;}
+  .mini-btn{font-size:0.78rem;font-weight:500;padding:7px 12px;border-radius:9px;color:var(--text-hi);background:var(--glass-strong);border:1px solid var(--glass-edge);}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;}
+  .chip{font:500 0.82rem ui-monospace,'Cascadia Mono',Consolas,monospace;padding:6px 11px;border-radius:9px;color:var(--accent-bright);background:rgba(var(--accent-rgb),0.12);border:1px solid rgba(var(--accent-rgb),0.28);}
+  .bundle-flow{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:0.84rem;color:var(--text-mid);flex-wrap:wrap;}
+  .bundle-flow code{font:500 0.8rem ui-monospace,Consolas,monospace;padding:5px 9px;border-radius:8px;background:var(--recess);border:1px solid var(--hairline);color:var(--text-hi);}
+  .browse-card{padding:0;display:flex;flex-direction:column;}
+  .browse-card .copy{padding:30px 30px 18px;}
+  .browse-card .shot{margin:0 30px;border-radius:14px 14px 0 0;overflow:hidden;border:1px solid var(--glass-edge);border-bottom:0;max-height:300px;}
+  .browse-card .shot img{display:block;width:100%;}
+  .meta-list{margin-top:22px;border-radius:14px;overflow:hidden;border:1px solid var(--hairline);background:var(--recess);font-size:0.86rem;}
+  .meta-list div{display:flex;justify-content:space-between;gap:14px;padding:10px 14px;border-bottom:1px solid var(--hairline);}
+  .meta-list div:last-child{border-bottom:0;}
+  .meta-list span{color:var(--text-low);}
+  .toggle-demo{display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding:14px 16px;border-radius:14px;background:var(--recess);border:1px solid var(--hairline);font-size:0.9rem;}
+  .toggle-demo small{display:block;color:var(--text-low);font-size:0.78rem;}
+  .tg{width:46px;height:26px;border-radius:999px;background:rgba(127,138,165,0.35);position:relative;flex-shrink:0;}
+  .tg::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.35);}
+  .split-shot{position:relative;margin-top:22px;border-radius:14px;overflow:hidden;border:1px solid var(--glass-edge);aspect-ratio:16/8;}
+  .split-shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top left;display:block;}
+  .split-shot .l{clip-path:polygon(0 0,58% 0,42% 100%,0 100%);}
+  .split-shot .d{clip-path:polygon(58% 0,100% 0,100% 100%,42% 100%);}
+  .install-line{display:flex;align-items:center;gap:12px;margin-top:22px;padding:14px 16px;border-radius:14px;background:var(--recess);border:1px solid var(--hairline);font-size:0.9rem;color:var(--text-mid);}
+  .install-line img{width:40px;height:40px;border-radius:10px;}
 
-  /* Custom range sliders */
-  input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    cursor: pointer;
-  }
-  input[type="range"]::-webkit-slider-runnable-track {
-    background: var(--recess);
-    border: 1px solid var(--glass-edge);
-    height: 8px;
-    border-radius: 999px;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    margin-top: -6px;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
-    height: 20px;
-    width: 20px;
-    border-radius: 50%;
-    border: 2px solid #ffffff;
-    box-shadow: 0 0 12px rgba(168, 85, 247, 0.8);
-  }
+  /* showcase */
+  .tabs{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-bottom:34px;}
+  .tab{font:500 0.95rem 'DM Sans',sans-serif;padding:10px 20px;border-radius:999px;cursor:pointer;color:var(--text-mid);background:var(--glass);border:1px solid var(--glass-edge);transition:all .15s;}
+  .tab:hover{color:var(--text-hi);}
+  .tab[aria-selected="true"]{color:#fff;border-color:rgba(255,255,255,0.3);background:linear-gradient(135deg,var(--accent),var(--accent-deep));box-shadow:0 12px 26px -12px rgba(var(--accent-rgb),0.85);}
+  .showcase{max-width:1040px;margin:0 auto;}
+  .panel-shot[hidden]{display:none;}
+  .cap{margin-top:20px;text-align:center;color:var(--text-mid);font-size:1rem;}
 
-  .faq-answer {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s cubic-bezier(0, 1, 0, 1);
-  }
-  .faq-item.open .faq-answer {
-    max-height: 500px;
-    transition: max-height 0.3s ease-in-out;
-  }
-  .faq-item.open .faq-icon {
-    transform: rotate(180deg);
-  }
+  /* trust */
+  .trust{display:grid;grid-template-columns:1fr 1.15fr;gap:56px;align-items:center;}
+  .trust h2{font-size:clamp(2rem,4vw,3rem);}
+  .trust .txt p{margin-top:20px;font-size:1.1rem;color:var(--text-mid);}
+  .checks{list-style:none;margin:0;padding:8px 30px;}
+  .checks li{display:flex;gap:16px;padding:20px 0;border-bottom:1px solid var(--hairline);}
+  .checks li:last-child{border-bottom:0;}
+  .checks svg{width:22px;height:22px;flex-shrink:0;margin-top:2px;fill:none;stroke:var(--success);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;}
+  .checks b{display:block;font-weight:600;}
+  .checks span{display:block;margin-top:2px;font-size:0.94rem;color:var(--text-mid);}
+  @media (max-width:900px){ .trust{grid-template-columns:1fr;gap:34px;} }
 
-  @keyframes pulseGlow {
-    0%, 100% { opacity: 0.4; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.03); }
-  }
-  .glow-effect {
-    animation: pulseGlow 4s ease-in-out infinite;
-  }
+  /* privacy */
+  .privacy{text-align:center;padding:56px 30px;}
+  .privacy .zero{display:table;margin:6px auto 0;font:700 clamp(5rem,14vw,9rem)/1 'Playfair Display',serif;}
+  .privacy .zl{margin-top:6px;font-size:1.15rem;font-weight:600;}
+  .privacy p.sub{max-width:620px;margin:22px auto 0;color:var(--text-mid);font-size:1.08rem;}
+  .privacy .pills{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:30px;}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;font-size:0.88rem;color:var(--text-mid);background:var(--recess);border:1px solid var(--hairline);}
+  .pill svg{width:16px;height:16px;fill:none;stroke:var(--success);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* faq */
+  .faq{max-width:800px;margin:0 auto;display:grid;gap:12px;}
+  .faq details{border-radius:18px;background:var(--glass);border:1px solid var(--glass-edge);box-shadow:var(--inset-hi);transition:border-color .15s;}
+  .faq details[open]{border-color:var(--glass-edge-hi);}
+  .faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:20px 24px;font-weight:600;font-size:1.05rem;}
+  .faq summary::-webkit-details-marker{display:none;}
+  .faq summary::after{content:"+";font:400 1.6rem/1 'DM Sans',sans-serif;color:var(--accent-bright);transition:transform .2s;flex-shrink:0;}
+  .faq details[open] summary::after{transform:rotate(45deg);}
+  .faq .a{padding:0 24px 22px;color:var(--text-mid);}
+
+  /* final cta */
+  .final{text-align:center;padding:70px 30px;background:var(--glass-strong);}
+  .final h2{font-size:clamp(2rem,4.6vw,3.4rem);max-width:16ch;margin:0 auto;}
+  .final p{margin:20px auto 0;max-width:520px;color:var(--text-mid);font-size:1.1rem;}
+  .final .cta-row{margin-top:32px;}
+
+  /* footer */
+  footer{padding:46px 0 60px;border-top:1px solid var(--hairline);margin-top:40px;}
+  .foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:20px;}
+  .foot .logo .wm{height:18px;}
+  .foot .logo .emblem{height:32px;}
+  .foot nav{display:flex;gap:26px;flex-wrap:wrap;}
+  .foot nav a{color:var(--text-mid);text-decoration:none;font-size:0.92rem;}
+  .foot nav a:hover{color:var(--text-hi);}
+  .foot small{width:100%;color:var(--text-low);font-size:0.85rem;}
+
+  /* reveal on scroll (only when JS is running) */
+  .js .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease;}
+  .js .reveal.in{opacity:1;transform:none;}
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} .js .reveal{opacity:1;transform:none;transition:none;} .btn,.tab{transition:none;} }
+  /* keep last: the `font:` shorthand above would otherwise reset these */
+  h1,h2,h3,.fact b,.privacy .zero,.step .num{font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1;}
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ .card,.nav,.frame,.float,.btn,.eyebrow{background:var(--panel-solid);} }
 </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between antialiased">
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<linearGradient id="ud-back" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/><stop offset="100%" stop-color="#a855f7" stop-opacity="0.05"/></linearGradient>
+<linearGradient id="ud-front" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c084fc"/><stop offset="40%" stop-color="#a855f7"/><stop offset="100%" stop-color="#e11d48"/></linearGradient>
+<linearGradient id="ud-emerald" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#059669"/></linearGradient>
+<filter id="ud-glowP" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#a855f7" flood-opacity="0.5"/></filter>
+<filter id="ud-glowE" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#34d399" flood-opacity="0.6"/></filter>
 
-<svg width="0" height="0" class="absolute hidden" aria-hidden="true">
-  <defs>
-    <linearGradient id="ud-back" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.05"/>
-    </linearGradient>
-    <linearGradient id="ud-front" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#c084fc"/>
-      <stop offset="40%" stop-color="#a855f7"/>
-      <stop offset="100%" stop-color="#e11d48"/>
-    </linearGradient>
-    <linearGradient id="ud-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#059669"/>
-    </linearGradient>
-    <filter id="ud-glowP" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#a855f7" flood-opacity="0.5"/>
-    </filter>
-    <filter id="ud-glowE" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#34d399" flood-opacity="0.6"/>
-    </filter>
-    <linearGradient id="wm-grad" gradientUnits="userSpaceOnUse" x1="1518" y1="0" x2="4056" y2="0">
-      <stop offset="0" style="stop-color:var(--wm-g1)"/>
-      <stop offset="0.5" style="stop-color:var(--wm-g2)"/>
-      <stop offset="1" style="stop-color:var(--wm-g3)"/>
-    </linearGradient>
-  </defs>
-</svg>
+<linearGradient id="wm-grad" gradientUnits="userSpaceOnUse" x1="1518" y1="0" x2="4056" y2="0"><stop offset="0" style="stop-color:var(--wm-g1)"/><stop offset="0.5" style="stop-color:var(--wm-g2)"/><stop offset="1" style="stop-color:var(--wm-g3)"/></linearGradient></defs></svg>
+<a class="skip" href="#main">Skip to content</a>
 
-<header class="sticky top-0 z-50 w-full backdrop-blur-md border-b border-[var(--glass-edge)] bg-[var(--bg-deep)]/80 transition-colors">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-    
-    <!-- Brand Emblem & Wordmark -->
-    <a href="#" class="flex items-center gap-3 group">
-      <svg class="h-10 w-auto flex-shrink-0 transition-transform group-hover:scale-105" viewBox="-5.5 -3 348.5 443.5" aria-hidden="true">
-        <g transform="translate(-25,-25)">
-          <rect x="50" y="50" width="220" height="290" rx="32" fill="url(#ud-back)" stroke="#38bdf8" stroke-width="3" stroke-dasharray="10 8" stroke-opacity="0.6"/>
-          <rect x="80" y="90" width="100" height="12" rx="6" fill="#38bdf8" fill-opacity="0.4"/>
-          <rect x="80" y="114" width="140" height="8" rx="4" fill="#38bdf8" fill-opacity="0.2"/>
-        </g>
-        <g transform="translate(25,25)" filter="url(#ud-glowP)">
-          <rect x="50" y="50" width="240" height="310" rx="36" fill="url(#ud-front)"/>
-          <path d="M 50 86 A 36 36 0 0 1 86 50 L 254 50 A 36 36 0 0 1 290 86 L 290 140 L 50 210 Z" fill="#ffffff" fill-opacity="0.12"/>
-          <rect x="80" y="100" width="180" height="110" rx="16" fill="#090d16" fill-opacity="0.5" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25"/>
-          <path d="M 95 165 Q 115 125, 135 160 T 175 140 T 215 170 T 245 150" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
-          <circle cx="215" cy="170" r="6" fill="#ffffff"/>
-        </g>
-        <g transform="translate(10,10)" filter="url(#ud-glowE)">
-          <circle cx="65" cy="350" r="50" fill="url(#ud-emerald)" stroke="#ffffff" stroke-width="5"/>
-          <path d="M 40 350 L 58 368 L 92 330" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-        </g>
-      </svg>
-      <svg class="h-6 w-auto" viewBox="40 -714 4022 727" role="img" aria-label="Undupe">
-        <path class="wm-un" d="M267 -708V-309Q267 -260 288.5 -231.5Q310 -203 358 -203Q406 -203 429 -231.5Q452 -260 452 -309V-708H673V-309Q673 -208 631 -136.5Q589 -65 516 -29Q443 7 353 7Q263 7 193.5 -29Q124 -65 85 -136Q46 -207 46 -309V-708ZM1433 0H1211L976 -356V0H754V-708H976L1211 -346V-708H1433Z"/>
-        <path fill="url(#wm-grad)" d="M2181 -356Q2181 -255 2136 -174Q2091 -93 2007.5 -46.5Q1924 0 1813 0H1518V-708H1813Q1924 -708 2007.5 -663Q2091 -618 2136 -538Q2181 -458 2181 -356ZM1956 -356Q1956 -432 1912 -473Q1868 -514 1793 -514H1740V-198H1793Q1868 -198 1912 -239Q1956 -280 1956 -356ZM2463 -708V-309Q2463 -260 2484.5 -231.5Q2506 -203 2554 -203Q2602 -203 2625 -231.5Q2648 -260 2648 -309V-708H2869V-309Q2869 -208 2827 -136.5Q2785 -65 2712 -29Q2639 7 2549 7Q2459 7 2389.5 -29Q2320 -65 2281 -136Q2242 -207 2242 -309V-708ZM3260 -225H3172V0H2950V-708H3260Q3390 -708 3459.5 -642Q3529 -576 3529 -465Q3529 -398 3498 -343.5Q3467 -289 3406.5 -257Q3346 -225 3260 -225ZM3304 -465Q3304 -530 3235 -530H3172V-400H3235Q3304 -400 3304 -465ZM3806 -531V-444H4026V-277H3806V-177H4056V0H3584V-708H4056V-531Z"/>
-      </svg>
-    </a>
-
-    <!-- Nav Links -->
-    <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-[var(--text-mid)]">
-      <a href="#features" class="hover:text-[var(--text-hi)] transition-colors">Features</a>
-      <a href="#how-it-works" class="hover:text-[var(--text-hi)] transition-colors">How It Works</a>
-      <a href="#privacy" class="hover:text-[var(--text-hi)] transition-colors">Privacy & Security</a>
-      <a href="#calculator" class="hover:text-[var(--text-hi)] transition-colors">Savings Estimator</a>
-      <a href="#faq" class="hover:text-[var(--text-hi)] transition-colors">FAQ</a>
+<header class="nav" id="nav">
+  <div class="container nav-inner">
+    <a class="logo" href="#top" aria-label="Undupe home"><svg class="emblem" viewBox="-5.5 -3 348.5 443.5" aria-hidden="true" focusable="false">
+<g transform="translate(-25,-25)">
+  <rect x="50" y="50" width="220" height="290" rx="32" fill="url(#ud-back)" stroke="#38bdf8" stroke-width="3" stroke-dasharray="10 8" stroke-opacity="0.6"/>
+  <rect x="80" y="90" width="100" height="12" rx="6" fill="#38bdf8" fill-opacity="0.4"/>
+  <rect x="80" y="114" width="140" height="8" rx="4" fill="#38bdf8" fill-opacity="0.2"/>
+  <rect x="80" y="132" width="110" height="8" rx="4" fill="#38bdf8" fill-opacity="0.15"/>
+</g>
+<g transform="translate(25,25)" filter="url(#ud-glowP)">
+  <rect x="50" y="50" width="240" height="310" rx="36" fill="url(#ud-front)"/>
+  <path d="M 50 86 A 36 36 0 0 1 86 50 L 254 50 A 36 36 0 0 1 290 86 L 290 140 L 50 210 Z" fill="#ffffff" fill-opacity="0.12"/>
+  <rect x="80" y="100" width="180" height="110" rx="16" fill="#090d16" fill-opacity="0.5" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25"/>
+  <path d="M 95 165 Q 115 125, 135 160 T 175 140 T 215 170 T 245 150" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 95 180 Q 120 150, 145 175 T 205 160 T 245 185" fill="none" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" stroke-opacity="0.7"/>
+  <circle cx="215" cy="170" r="6" fill="#ffffff"/>
+  <rect x="80" y="235" width="130" height="12" rx="6" fill="#ffffff" fill-opacity="0.95"/>
+  <rect x="80" y="257" width="90" height="10" rx="5" fill="#f472b6" fill-opacity="0.8"/>
+  <rect x="80" y="277" width="110" height="10" rx="5" fill="#38bdf8" fill-opacity="0.6"/>
+</g>
+<g transform="translate(10,10)" filter="url(#ud-glowE)">
+  <circle cx="65" cy="350" r="50" fill="url(#ud-emerald)" stroke="#ffffff" stroke-width="5"/>
+  <path d="M 40 350 L 58 368 L 92 330" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg><svg class="wm" viewBox="40 -714 4022 727" role="img" aria-label="Undupe" focusable="false"><path class="wm-un" d="M267 -708V-309Q267 -260 288.5 -231.5Q310 -203 358 -203Q406 -203 429 -231.5Q452 -260 452 -309V-708H673V-309Q673 -208 631 -136.5Q589 -65 516 -29Q443 7 353 7Q263 7 193.5 -29Q124 -65 85 -136Q46 -207 46 -309V-708ZM1433 0H1211L976 -356V0H754V-708H976L1211 -346V-708H1433Z"/><path fill="url(#wm-grad)" d="M2181 -356Q2181 -255 2136 -174Q2091 -93 2007.5 -46.5Q1924 0 1813 0H1518V-708H1813Q1924 -708 2007.5 -663Q2091 -618 2136 -538Q2181 -458 2181 -356ZM1956 -356Q1956 -432 1912 -473Q1868 -514 1793 -514H1740V-198H1793Q1868 -198 1912 -239Q1956 -280 1956 -356ZM2463 -708V-309Q2463 -260 2484.5 -231.5Q2506 -203 2554 -203Q2602 -203 2625 -231.5Q2648 -260 2648 -309V-708H2869V-309Q2869 -208 2827 -136.5Q2785 -65 2712 -29Q2639 7 2549 7Q2459 7 2389.5 -29Q2320 -65 2281 -136Q2242 -207 2242 -309V-708ZM3260 -225H3172V0H2950V-708H3260Q3390 -708 3459.5 -642Q3529 -576 3529 -465Q3529 -398 3498 -343.5Q3467 -289 3406.5 -257Q3346 -225 3260 -225ZM3304 -465Q3304 -530 3235 -530H3172V-400H3235Q3304 -400 3304 -465ZM3806 -531V-444H4026V-277H3806V-177H4056V0H3584V-708H4056V-531Z"/></svg></a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#trust">Safety</a>
+      <a href="#faq">FAQ</a>
     </nav>
-
-    <!-- Header Actions -->
-    <div class="flex items-center gap-3">
-      <button id="themeToggleBtn" class="btn-glass p-2.5 rounded-xl flex items-center justify-center text-[var(--text-mid)] hover:text-[var(--text-hi)]" title="Toggle Dark/Light Mode">
-        <span id="themeIcon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </span>
-      </button>
-
-      <a href="https://johnlaz.github.io/undupe/app/index.html" target="_blank" rel="noopener" class="btn-hero px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
-        <span>Launch App</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </a>
+    <div class="nav-cta">
+      <button class="btn icon-btn" id="themeBtn" type="button" aria-label="Switch between light and dark theme"><svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button>
+      <a class="btn btn-primary btn-sm" href="app/">Launch app</a>
     </div>
-
   </div>
 </header>
 
-<main class="flex-grow">
+<main id="main">
+<section class="hero" id="top">
+  <div class="container">
+    <span class="eyebrow"><span class="dot"></span>Free &middot; Runs entirely in your browser</span>
+    <h1>Years of backups.<br><span class="grad-text">One clean archive.</span></h1>
+    <p class="lead">Undupe finds the exact duplicate files hiding across your drives, lets you choose which copy survives, and rebuilds everything into a tidy, organized folder. Nothing is uploaded. Nothing to install.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="app/">Launch Undupe <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn" href="#how">See how it works</a>
+    </div>
+    <p class="hero-note">Works in Chrome and Edge on desktop.</p>
+    <div class="compat" id="compat" role="note"><strong>Heads up:</strong> this browser can't open folders on your drive, which Undupe needs. Open this page in Chrome or Edge on a computer to use the app.</div>
 
-  <section class="relative pt-12 pb-20 md:pt-20 md:pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <div class="text-center max-w-4xl mx-auto mb-12">
-      
-      <!-- Key Value Badges -->
-      <div class="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-full border border-[var(--glass-edge)] bg-[var(--glass)] backdrop-blur-md mb-8 text-xs font-medium text-[var(--text-mid)]">
-        <span class="inline-flex items-center gap-1.5 text-emerald-400 font-semibold">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          100% Private &amp; Offline
-        </span>
-        <span class="text-[var(--text-low)]">•</span>
-        <span>Zero Server Uploads</span>
-        <span class="text-[var(--text-low)]">•</span>
-        <span>Byte-for-Byte SHA-256</span>
-        <span class="text-[var(--text-low)]">•</span>
-        <span>Free &amp; Open Source</span>
+    <div class="hero-visual">
+      <div class="frame">
+        <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>undupe</span></div>
+        <img class="only-dark" src="shot-review-dark.webp" width="2000" height="1250" alt="Undupe's duplicate review screen, showing a folder-clone card, duplicate groups with thumbnails, and Keep tags" fetchpriority="high">
+        <img class="only-light" src="shot-review-light.webp" width="2000" height="1250" alt="Undupe's duplicate review screen in light mode" fetchpriority="high">
       </div>
-
-      <!-- Main Headline -->
-      <h1 class="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[var(--text-hi)] mb-6 leading-[1.1]">
-        Years of backups.<br>
-        <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-sky-400">One clean archive.</span>
-      </h1>
-
-      <p class="text-lg sm:text-xl text-[var(--text-mid)] font-normal max-w-2xl mx-auto leading-relaxed mb-10">
-        Undupe finds exact duplicate files hiding across years of old drives, lets you keep what matters, and organizes the rest. Runs 100% locally in your web browser.
-      </p>
-
-      <!-- Action Buttons -->
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="https://johnlaz.github.io/undupe/app/index.html" target="_blank" rel="noopener" class="w-full sm:w-auto btn-hero px-8 py-4 rounded-2xl text-base font-bold flex items-center justify-center gap-3 shadow-2xl">
-          <span>Launch Undupe Free</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-        <a href="#how-it-works" class="w-full sm:w-auto btn-glass px-8 py-4 rounded-2xl text-base font-medium flex items-center justify-center gap-2">
-          <span>See How It Works</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
+      <div class="float f1" aria-hidden="true">
+        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+        <span>8 duplicate copies skipped<small>2.0 MB not carried over</small></span>
       </div>
-
-      <p class="text-xs text-[var(--text-low)] mt-4">
-        Requires Chrome or Edge desktop browser (File System Access API). Nothing is installed.
-      </p>
+      <div class="float f2" aria-hidden="true">
+        <span class="badge violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        <span>Nothing leaves your machine<small>No server. No account.</small></span>
+      </div>
     </div>
 
-    <div class="relative max-w-5xl mx-auto">
-      <div class="absolute -inset-1 rounded-[28px] bg-gradient-to-r from-purple-600 via-pink-600 to-sky-500 opacity-30 blur-2xl glow-effect pointer-events-none"></div>
+    <div class="facts reveal">
+      <div class="fact"><b>0 uploads</b><span>Everything runs on your computer</span></div>
+      <div class="fact"><b>Byte-for-byte</b><span>Exact matches, never guesses</span></div>
+      <div class="fact"><b>Copy or Move</b><span>Originals untouched by default</span></div>
+      <div class="fact"><b>Works offline</b><span>Install it like a native app</span></div>
+    </div>
+  </div>
+</section>
 
-      <div class="glass-panel p-6 sm:p-8 relative z-10 overflow-hidden">
-        
-        <!-- App Top Bar Simulation -->
-        <div class="flex items-center justify-between pb-6 border-b border-[var(--border-glass)] mb-6 flex-wrap gap-4">
-          <div class="flex items-center gap-3">
-            <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
-            <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
-            <span class="w-3 h-3 rounded-full bg-green-500/80"></span>
-            <span class="text-xs font-mono text-[var(--text-low)] ml-2">Undupe v1.0 • Session: Active</span>
-          </div>
+<section class="section">
+  <div class="container problem reveal">
+    <h2>Your backups have become a <span class="grad-text">junk drawer.</span></h2>
+    <p>Old laptops. Phone dumps. Three external drives that all contain a folder called &ldquo;Photos&rdquo;. Somewhere in there is the only copy of something you love, buried under a dozen copies of everything else.</p>
+    <p>Sorting it by hand would take weeks. Handing it to a black-box tool feels worse. <strong>Undupe takes the middle path:</strong> it does the heavy lifting, shows its work, and asks before it acts.</p>
+  </div>
+</section>
 
-          <div class="flex items-center gap-2 text-xs">
-            <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Direct Local Drive Access
-            </span>
-          </div>
+<section class="section" id="how">
+  <div class="container">
+    <div class="section-head reveal"><span class="kicker">How it works</span><h2>Four steps. You stay in control.</h2><p>Nothing is written anywhere until you approve a preview of exactly what will happen.</p></div>
+    <div class="steps">
+      <div class="step reveal"><div class="num">1</div><h3>Point</h3><p>Choose one or more source folders and an empty output folder. Add as many drives as you like.</p></div>
+      <div class="step reveal"><div class="num">2</div><h3>Scan</h3><p>Undupe catalogs everything, then fingerprints only the files that could possibly match. Close the tab and resume later.</p></div>
+      <div class="step reveal"><div class="num">3</div><h3>Review</h3><p>See every duplicate group with real thumbnails. Newest wins by default, and any decision is one click to change.</p></div>
+      <div class="step reveal"><div class="num">4</div><h3>Organize</h3><p>Files land in a clean folder sorted into Photos, Videos, Documents, Audio and more. Copy or move, your call.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-head reveal"><span class="kicker">Features</span><h2>Built for the mess you actually have.</h2><p>Serious about safety, fast on big archives, and a pleasure to look at.</p></div>
+    <div class="bento">
+
+      <article class="card s7 reveal">
+        <div class="icon-badge"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 9.5C8 19.3 5 15.5 5 11V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Exact matches only</h3>
+        <p>Files are compared by SHA-256 fingerprints, never by name, date or size alone. If Undupe says two files are duplicates, they are identical, byte for byte. Most files are ruled out early, so they never get read in full.</p>
+        <div class="pipeline" aria-label="Three-stage matching pipeline">
+          <div class="pipe-step"><b>Same size?</b><span>Instant. Rules out most files.</span></div>
+          <div class="pipe-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="pipe-step"><b>Same start and end?</b><span>A quick partial fingerprint.</span></div>
+          <div class="pipe-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+          <div class="pipe-step"><b>Same full fingerprint?</b><span>Huge videos hashed in chunks.</span></div>
         </div>
+      </article>
 
-        <!-- Live Mockup Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div class="recess-box p-4 flex flex-col justify-between">
-            <span class="text-xs text-[var(--text-low)] font-medium">Exact Duplicate Groups</span>
-            <span class="font-serif text-3xl font-bold text-[var(--text-hi)] mt-2">1,482</span>
-            <span class="text-xs text-purple-400 mt-1">Found in 142.8 GB total scan</span>
-          </div>
-          <div class="recess-box p-4 flex flex-col justify-between">
-            <span class="text-xs text-[var(--text-low)] font-medium">Redundant Copies</span>
-            <span class="font-serif text-3xl font-bold text-sky-400 mt-2">3,210</span>
-            <span class="text-xs text-sky-400/80 mt-1">Byte-for-byte SHA-256 verified</span>
-          </div>
-          <div class="recess-box p-4 flex flex-col justify-between">
-            <span class="text-xs text-[var(--text-low)] font-medium">Reclaimable Space</span>
-            <span class="font-serif text-3xl font-bold text-pink-400 mt-2">84.2 GB</span>
-            <span class="text-xs text-pink-400/80 mt-1">Ready to recover in 1 click</span>
-          </div>
+      <article class="card s5 reveal">
+        <span class="example-tag">Example</span>
+        <div class="icon-badge cyan"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></div>
+        <h3>Folder clone detection</h3>
+        <p>Skip thousands of file-by-file decisions. Undupe spots whole folders that already exist somewhere else.</p>
+        <div class="clone-mock" aria-hidden="true">
+          <div class="t"><strong>Backups/2018</strong> is fully contained in <strong>Pictures/2018</strong></div>
+          <div class="m">1,200 files &middot; 42 GB</div>
+          <div class="b"><span class="mini-btn">Keep copies in Backups/2018</span><span class="mini-btn">Keep copies in Pictures/2018</span></div>
         </div>
+      </article>
 
-        <!-- Sample Duplicate Review Row Simulation -->
-        <div class="recess-box p-4 sm:p-5">
-          <div class="flex justify-between items-center mb-3 text-xs font-mono text-[var(--text-low)]">
-            <span>Group #42 • 3 Copies • 1.4 GB each (SHA-256: 7f8a...90bc)</span>
-            <span class="text-emerald-400 font-sans font-semibold">Newest Win Auto-Selected</span>
-          </div>
+      <article class="card s4 reveal">
+        <div class="icon-badge"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/></svg></div>
+        <h3>Apps stay in one piece</h3>
+        <p>Bundles and libraries are recognized and copied whole, never scattered across your Photos and Documents.</p>
+        <div class="chips" aria-hidden="true"><span class="chip">.app</span><span class="chip">.photoslibrary</span><span class="chip">.logicx</span><span class="chip">.fcpbundle</span><span class="chip">.xcodeproj</span></div>
+      </article>
 
-          <!-- File Copy 1 (Keep) -->
-          <div class="p-3 mb-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 flex items-center gap-3 sm:gap-4 transition-all hover:bg-emerald-500/15">
-            <input type="radio" checked class="accent-emerald-400 h-4 w-4">
-            <div class="w-10 h-10 rounded-lg bg-purple-900/40 border border-purple-500/30 flex items-center justify-center flex-shrink-0 text-purple-300">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.8"/></svg>
-            </div>
-            <div class="flex-grow min-w-0 text-left">
-              <div class="text-sm font-medium text-[var(--text-hi)] truncate">External_Drive_2023/Photos/RAW_0492.CR2</div>
-              <div class="text-xs text-[var(--text-low)] mt-0.5">Modified Sep 14, 2023 • 1.40 GB • EXIF Capture Date Verified</div>
-            </div>
-            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex-shrink-0">Keep</span>
-          </div>
-
-          <!-- File Copy 2 (Skip) -->
-          <div class="p-3 mb-2 rounded-xl border border-transparent bg-black/20 flex items-center gap-3 sm:gap-4 opacity-75 hover:opacity-100">
-            <input type="radio" class="accent-emerald-400 h-4 w-4">
-            <div class="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0 text-gray-400">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.8"/></svg>
-            </div>
-            <div class="flex-grow min-w-0 text-left">
-              <div class="text-sm font-medium text-[var(--text-hi)] truncate">Old_Laptop_Backup/Desktop/Unsorted/RAW_0492 (Copy).CR2</div>
-              <div class="text-xs text-[var(--text-low)] mt-0.5">Modified Aug 02, 2021 • 1.40 GB</div>
-            </div>
-            <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--recess)] text-[var(--text-low)] border border-[var(--glass-edge)] flex-shrink-0">Skip</span>
-          </div>
-
-          <!-- File Copy 3 (Skip) -->
-          <div class="p-3 rounded-xl border border-transparent bg-black/20 flex items-center gap-3 sm:gap-4 opacity-75 hover:opacity-100">
-            <input type="radio" class="accent-emerald-400 h-4 w-4">
-            <div class="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0 text-gray-400">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.8"/></svg>
-            </div>
-            <div class="flex-grow min-w-0 text-left">
-              <div class="text-sm font-medium text-[var(--text-hi)] truncate">USB_Backup_2019/DCIM/100CANON/RAW_0492.CR2</div>
-              <div class="text-xs text-[var(--text-low)] mt-0.5">Modified Jun 10, 2019 • 1.40 GB</div>
-            </div>
-            <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--recess)] text-[var(--text-low)] border border-[var(--glass-edge)] flex-shrink-0">Skip</span>
-          </div>
-
+      <article class="card s8 browse-card reveal">
+        <div class="copy">
+          <div class="icon-badge cyan"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+          <h3>A viewer that beats Explorer for this job</h3>
+          <p>Search your whole archive across every source at once. Sort by name, size or date, filter by type, and click any file for its details and a full preview.</p>
         </div>
+        <div class="shot">
+          <img class="only-dark" src="shot-browse-dark.webp" width="2000" height="1250" loading="lazy" alt="Undupe's Browse view, listing files with thumbnails, sizes and dates">
+          <img class="only-light" src="shot-browse-light.webp" width="2000" height="1250" loading="lazy" alt="Undupe's Browse view in light mode">
+        </div>
+      </article>
 
+      <article class="card s4 reveal">
+        <div class="icon-badge green"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
+        <h3>Real capture dates</h3>
+        <p>Backups often reset file dates. Undupe can read the date a JPEG photo was actually taken and sort by it.</p>
+        <div class="meta-list" aria-hidden="true">
+          <div><span>Date taken</span><b>May 1, 2010</b></div>
+          <div><span>Camera</span><b>Canon EOS 5D</b></div>
+          <div><span>Dimensions</span><b>4000 &times; 3000</b></div>
+        </div>
+      </article>
+
+      <article class="card s4 reveal">
+        <div class="icon-badge"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+        <h3>Copy or Move, verified</h3>
+        <p>Copy leaves your originals alone. Move deletes a source file only after its copy has been size-checked.</p>
+        <div class="toggle-demo" aria-hidden="true"><div>Copy<small>Originals stay where they are</small></div><span class="tg"></span></div>
+      </article>
+
+      <article class="card s4 reveal">
+        <div class="icon-badge cyan"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4L4 9"/><path d="M4 4v5h5"/><path d="M4 13a8 8 0 0 0 14 4l2-2"/><path d="M20 20v-5h-5"/></svg></div>
+        <h3>Safe to interrupt</h3>
+        <p>Close the tab mid-scan and pick up later. Re-running a migration recognizes what's already copied and never piles up duplicates.</p>
+      </article>
+
+      <article class="card s6 reveal">
+        <div class="icon-badge"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 21h14"/></svg></div>
+        <h3>Installs like a native app</h3>
+        <p>Add it to your desktop from Chrome or Edge. It launches in its own window and works fully offline, because every font and icon is bundled.</p>
+        <div class="install-line"><img src="app/icon-192.png" width="40" height="40" alt=""><span>Undupe &middot; launches offline</span></div>
+      </article>
+
+      <article class="card s6 reveal">
+        <div class="icon-badge cyan"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/></svg></div>
+        <h3>Beautiful in light and dark</h3>
+        <p>A frosted-glass interface with matching themes. It follows your system setting, and you can switch any time.</p>
+        <div class="split-shot" aria-hidden="true">
+          <img class="l" src="shot-setup-light.webp" width="2000" height="1250" loading="lazy" alt="">
+          <img class="d" src="shot-setup-dark.webp" width="2000" height="1250" loading="lazy" alt="">
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="see">
+  <div class="container">
+    <div class="section-head reveal"><span class="kicker">See it</span><h2>A calm way through a big cleanup.</h2></div>
+    <div class="showcase reveal">
+      <div class="tabs" role="tablist" aria-label="Screens">
+        <button class="tab" role="tab" id="t-setup" aria-selected="true" aria-controls="p-setup" type="button">Setup</button>
+        <button class="tab" role="tab" id="t-review" aria-selected="false" aria-controls="p-review" type="button">Review</button>
+        <button class="tab" role="tab" id="t-done" aria-selected="false" aria-controls="p-done" type="button">Done</button>
+        <button class="tab" role="tab" id="t-browse" aria-selected="false" aria-controls="p-browse" type="button">Browse</button>
+      </div>
+      <div class="frame">
+        <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>undupe</span></div>
+        <div class="panel-shot" role="tabpanel" id="p-setup" aria-labelledby="t-setup">
+          <img class="only-dark" src="shot-setup-dark.webp" width="2000" height="1250" loading="lazy" alt="Setup screen: choose source folders, an output folder, and how duplicates are handled">
+          <img class="only-light" src="shot-setup-light.webp" width="2000" height="1250" loading="lazy" alt="Setup screen in light mode">
+        </div>
+        <div class="panel-shot" role="tabpanel" id="p-review" aria-labelledby="t-review" hidden>
+          <img class="only-dark" src="shot-review-dark.webp" width="2000" height="1250" loading="lazy" alt="Review screen with duplicate groups">
+          <img class="only-light" src="shot-review-light.webp" width="2000" height="1250" loading="lazy" alt="Review screen in light mode">
+        </div>
+        <div class="panel-shot" role="tabpanel" id="p-done" aria-labelledby="t-done" hidden>
+          <img class="only-dark" src="shot-done-dark.webp" width="2000" height="1250" loading="lazy" alt="Completion screen with stats and a breakdown by type and year">
+          <img class="only-light" src="shot-done-light.webp" width="2000" height="1250" loading="lazy" alt="Completion screen in light mode">
+        </div>
+        <div class="panel-shot" role="tabpanel" id="p-browse" aria-labelledby="t-browse" hidden>
+          <img class="only-dark" src="shot-browse-dark.webp" width="2000" height="1250" loading="lazy" alt="Browse view for searching the whole archive">
+          <img class="only-light" src="shot-browse-light.webp" width="2000" height="1250" loading="lazy" alt="Browse view in light mode">
+        </div>
+      </div>
+      <p class="cap" id="cap">Pick your folders, choose a rule, and press Begin scan.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="trust">
+  <div class="container trust">
+    <div class="txt reveal">
+      <span class="kicker">Safety</span>
+      <h2>Built to be trusted with your files.</h2>
+      <p>Your files are precious, so Undupe is conservative by design. It would rather do nothing than do something it isn't sure about.</p>
+    </div>
+    <div class="card reveal" style="padding:6px 0;">
+      <ul class="checks">
+        <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><div><b>Copy never touches your originals</b><span>Move mode is opt-in.</span></div></li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><div><b>Move verifies before it deletes</b><span>If a copy looks off, the original stays.</span></div></li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><div><b>Never overwrites a different file</b><span>Same name, different content? Both are kept.</span></div></li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><div><b>Overlap guard</b><span>Refuses an output folder inside a source, or the reverse.</span></div></li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg><div><b>You see the plan first</b><span>A preview shows what will be written before anything is.</span></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="card privacy reveal">
+      <span class="kicker">Private by design</span>
+      <div class="zero grad-text">0</div>
+      <div class="zl">network requests while you scan</div>
+      <p class="sub">Don't take our word for it. Launch the app, open your browser's network tab, and run a scan. Nothing leaves your machine, because there isn't a server to send it to.</p>
+      <div class="pills">
+        <span class="pill"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>No account</span>
+        <span class="pill"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>No analytics</span>
+        <span class="pill"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>No uploads</span>
+        <span class="pill"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Works offline</span>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="features" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <div class="text-center max-w-3xl mx-auto mb-16">
-      <h2 class="font-serif text-3xl sm:text-5xl font-bold text-[var(--text-hi)] mb-4">
-        Engineered for peace of mind.
-      </h2>
-      <p class="text-[var(--text-mid)] text-base sm:text-lg">
-        Most cleanup tools ask you to trust an algorithm or upload personal photos to a third-party cloud. Undupe gives you total transparency, zero risk, and cryptographically verified precision.
-      </p>
+<section class="section" id="faq">
+  <div class="container">
+    <div class="section-head reveal"><span class="kicker">FAQ</span><h2>Good questions.</h2></div>
+    <div class="faq reveal">
+      <details><summary>Does it upload my files?</summary><div class="a">No. Everything runs locally in your browser, and there is no backend. After the page loads, Undupe makes no network requests.</div></details>
+      <details><summary>Will it delete anything?</summary><div class="a">Only if you choose Move mode, and then only files it has verified were copied. Copy mode, the default, leaves your originals alone.</div></details>
+      <details><summary>What counts as a duplicate?</summary><div class="a">Byte-for-byte identical content, regardless of file name or location. Resized or re-exported versions of a photo are different files and are not matched yet.</div></details>
+      <details><summary>Which copy does it keep?</summary><div class="a">By default, the newest by modified date. You can switch to oldest, override any group, or settle whole folders at once with folder clones.</div></details>
+      <details><summary>My file dates are wrong because my backups reset them.</summary><div class="a">The viewer can read the real capture date from JPEG photos (EXIF) and sort by it, along with camera model and dimensions. Other formats fall back to the file date.</div></details>
+      <details><summary>How big an archive can it handle?</summary><div class="a">It's built with large archives in mind: tiered fingerprinting, background workers, and chunked hashing for huge files. Scan speed is mostly limited by how fast your drive can be read. Start with a small folder to see how it behaves on your hardware.</div></details>
+      <details><summary>Why doesn't it work in Firefox or Safari?</summary><div class="a">They don't support the browser feature that lets a web page work with real folders on your drive. Chrome and Edge on desktop do.</div></details>
+      <details><summary>Is it free?</summary><div class="a">Yes.</div></details>
     </div>
+  </div>
+</section>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      
-      <!-- Feature 1 -->
-      <div class="glass-panel glass-panel-hover p-8 flex flex-col justify-between">
-        <div>
-          <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-6">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <h3 class="font-serif text-xl font-semibold text-[var(--text-hi)] mb-3">Byte-for-Byte SHA-256</h3>
-          <p class="text-sm text-[var(--text-mid)] leading-relaxed">
-            Never relies on filenames, creation dates, or file sizes alone. Undupe computes cryptographic SHA-256 checksums to guarantee two files are 100% identical before matching.
-          </p>
-        </div>
-        <div class="mt-6 pt-4 border-t border-[var(--border-glass)] text-xs text-purple-400 font-medium">
-          ✓ Zero accidental deletions
-        </div>
-      </div>
-
-      <!-- Feature 2 -->
-      <div class="glass-panel glass-panel-hover p-8 flex flex-col justify-between">
-        <div>
-          <div class="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 mb-6">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <h3 class="font-serif text-xl font-semibold text-[var(--text-hi)] mb-3">Folder Clone Detection</h3>
-          <p class="text-sm text-[var(--text-mid)] leading-relaxed">
-            Instead of forcing you to make thousands of file-by-file decisions, Undupe detects entire duplicate backup folders (e.g. <code class="text-xs bg-black/30 px-1.5 py-0.5 rounded text-sky-300">Backups/2018</code> vs <code class="text-xs bg-black/30 px-1.5 py-0.5 rounded text-sky-300">Pictures/2018</code>) and resolves them in 1 click.
-          </p>
-        </div>
-        <div class="mt-6 pt-4 border-t border-[var(--border-glass)] text-xs text-sky-400 font-medium">
-          ✓ Resolve 1,000s of files instantly
-        </div>
-      </div>
-
-      <!-- Feature 3 -->
-      <div class="glass-panel glass-panel-hover p-8 flex flex-col justify-between">
-        <div>
-          <div class="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400 mb-6">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <h3 class="font-serif text-xl font-semibold text-[var(--text-hi)] mb-3">App & Bundle Preservation</h3>
-          <p class="text-sm text-[var(--text-mid)] leading-relaxed">
-            Mac <code class="text-xs bg-black/30 px-1.5 py-0.5 rounded text-pink-300">.photoslibrary</code>, Logic Pro <code class="text-xs bg-black/30 px-1.5 py-0.5 rounded text-pink-300">.logicx</code>, Xcode projects, and <code class="text-xs bg-black/30 px-1.5 py-0.5 rounded text-pink-300">.app</code> bundles stay intact. They are copied whole and never shredded into loose files.
-          </p>
-        </div>
-        <div class="mt-6 pt-4 border-t border-[var(--border-glass)] text-xs text-pink-400 font-medium">
-          ✓ Complex projects protected
-        </div>
-      </div>
-
-      <!-- Feature 4 -->
-      <div class="glass-panel glass-panel-hover p-8 flex flex-col justify-between">
-        <div>
-          <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-6">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="2"/></svg>
-          </div>
-          <h3 class="font-serif text-xl font-semibold text-[var(--text-hi)] mb-3">Smart EXIF Capture Sorting</h3>
-          <p class="text-sm text-[var(--text-mid)] leading-relaxed">
-            Operating system file modified dates often reset during backup transfers. Undupe reads original camera capture dates directly from embedded JPEG EXIF metadata.
-          </p>
-        </div>
-        <div class="mt-6 pt-4 border-t border-[var(--border-glass)] text-xs text-emerald-400 font-medium">
-          ✓ Accurate chronological sorting
-        </div>
-      </div>
-
-      <!-- Feature 5 -->
-      <div class="glass-panel glass-panel-hover p-8 flex flex-col justify-between">
-        <div>
-          <div class="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400 mb-6">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2"/></svg>
-          </div>
-          <h3 class="font-serif text-xl font-semibold text-[var(--text-hi)] mb-3">3-Tiered Ultra-Fast Scan</h3>
-          <p class="text-sm text-[var(--text-mid)] leading-relaxed">
-            Scans multi-terabyte drives in minutes. Uses size grouping first, then partial head/tail fingerprinting, and only runs full SHA-256 on actual matching candidates.
-          </p>
-        </div>
-        <div class="mt-6 pt-4 border-t border-[var(--border-glass)] text-xs text-yellow-400 font-medium">
-          ✓ Multi-threaded Web Workers
-        </div>
-      </div>
-
-      <!-- Feature 6 -->
-      <div class="glass-panel glass-panel-hover p-8 flex flex-col justify-between">
-        <div>
-          <div class="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-6">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
-          </div>
-          <h3 class="font-serif text-xl font-semibold text-[var(--text-hi)] mb-3">Built-in Archive Viewer</h3>
-          <p class="text-sm text-[var(--text-mid)] leading-relaxed">
-            Search, filter, and inspect your combined backup catalog across every source drive simultaneously before performing any file operations. Includes live image/video previews.
-          </p>
-        </div>
-        <div class="mt-6 pt-4 border-t border-[var(--border-glass)] text-xs text-rose-400 font-medium">
-          ✓ Full visual search & inspection
-        </div>
-      </div>
-
+<section class="section" style="padding-top:40px;">
+  <div class="container">
+    <div class="card final reveal">
+      <h2>Ready to <span class="grad-text">clean up?</span></h2>
+      <p>Start with a small folder to see how it works. It takes about a minute.</p>
+      <div class="cta-row"><a class="btn btn-primary" href="app/">Launch Undupe <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     </div>
-  </section>
-
-  <section id="calculator" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <div class="glass-panel p-8 sm:p-12 relative overflow-hidden">
-      
-      <div class="max-w-3xl mb-12">
-        <span class="text-xs font-bold uppercase tracking-wider text-purple-400 mb-2 block">Interactive Estimator</span>
-        <h2 class="font-serif text-3xl sm:text-4xl font-bold text-[var(--text-hi)] mb-4">
-          Calculate your storage recovery potential
-        </h2>
-        <p class="text-[var(--text-mid)] text-base">
-          Adjust the sliders below to estimate how many gigabytes of wasted storage and hours of manual cleanup Undupe can recover from your backup drives.
-        </p>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        
-        <!-- Controls Column -->
-        <div class="lg:col-span-7 space-y-8">
-          
-          <!-- Slider 1: Total Drive Size -->
-          <div class="recess-box p-6">
-            <div class="flex justify-between items-center mb-3">
-              <label class="text-sm font-medium text-[var(--text-hi)]">Total Archive / Drive Size</label>
-              <span id="calcDriveValue" class="font-serif text-xl font-bold text-purple-400">1,000 GB (1 TB)</span>
-            </div>
-            <input type="range" id="calcDriveInput" min="100" max="10000" step="100" value="1000" class="w-full">
-            <div class="flex justify-between text-xs text-[var(--text-low)] mt-2">
-              <span>100 GB</span>
-              <span>2.5 TB</span>
-              <span>5 TB</span>
-              <span>10 TB</span>
-            </div>
-          </div>
-
-          <!-- Slider 2: Estimated Duplication Rate -->
-          <div class="recess-box p-6">
-            <div class="flex justify-between items-center mb-3">
-              <label class="text-sm font-medium text-[var(--text-hi)]">Estimated Duplication Rate</label>
-              <span id="calcRatioValue" class="font-serif text-xl font-bold text-sky-400">35%</span>
-            </div>
-            <input type="range" id="calcRatioInput" min="10" max="75" step="5" value="35" class="w-full">
-            <div class="flex justify-between text-xs text-[var(--text-low)] mt-2">
-              <span>10% (Clean)</span>
-              <span>35% (Typical Backups)</span>
-              <span>75% (Heavy Redundancy)</span>
-            </div>
-          </div>
-
-          <!-- Slider 3: Hourly Value -->
-          <div class="recess-box p-6">
-            <div class="flex justify-between items-center mb-3">
-              <label class="text-sm font-medium text-[var(--text-hi)]">Your Time Value ($/hr)</label>
-              <span id="calcHourlyValue" class="font-serif text-xl font-bold text-emerald-400">$35 / hr</span>
-            </div>
-            <input type="range" id="calcHourlyInput" min="15" max="150" step="5" value="35" class="w-full">
-            <div class="flex justify-between text-xs text-[var(--text-low)] mt-2">
-              <span>$15/hr</span>
-              <span>$50/hr</span>
-              <span>$100/hr</span>
-              <span>$150/hr</span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Live Output Column -->
-        <div class="lg:col-span-5">
-          <div class="p-8 rounded-2xl bg-gradient-to-br from-purple-900/40 via-purple-950/20 to-sky-950/30 border border-purple-500/30 relative text-center lg:text-left space-y-6">
-            
-            <div>
-              <div class="text-xs uppercase font-semibold text-[var(--text-low)] tracking-wider">Estimated Space Reclaimed</div>
-              <div id="calcResultGB" class="font-serif text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mt-1">
-                350 GB
-              </div>
-              <p class="text-xs text-[var(--text-mid)] mt-1">Recovered without buying new cloud storage or hardware.</p>
-            </div>
-
-            <div class="pt-6 border-t border-[var(--border-glass)] grid grid-cols-2 gap-4">
-              <div>
-                <div class="text-xs text-[var(--text-low)]">Manual Time Saved</div>
-                <div id="calcResultHours" class="font-serif text-2xl font-bold text-sky-400 mt-0.5">29.2 hrs</div>
-              </div>
-              <div>
-                <div class="text-xs text-[var(--text-low)]">Value of Time Saved</div>
-                <div id="calcResultSavings" class="font-serif text-2xl font-bold text-emerald-400 mt-0.5">$1,022</div>
-              </div>
-            </div>
-
-            <a href="https://johnlaz.github.io/undupe/app/index.html" target="_blank" rel="noopener" class="w-full btn-hero py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 font-bold shadow-lg">
-              <span>Recover Your Space Now</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-            </a>
-
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  </section>
-
-  <section id="how-it-works" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <div class="text-center max-w-3xl mx-auto mb-16">
-      <span class="text-xs font-bold uppercase tracking-wider text-sky-400 mb-2 block">Simple 4-Step Workflow</span>
-      <h2 class="font-serif text-3xl sm:text-5xl font-bold text-[var(--text-hi)] mb-4">
-        How Undupe works
-      </h2>
-      <p class="text-[var(--text-mid)] text-base sm:text-lg">
-        Designed from the ground up to keep you in total control at every step. Nothing is written or deleted until you explicitly review and approve.
-      </p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
-      
-      <!-- Step 1 -->
-      <div class="glass-panel p-6 relative">
-        <div class="w-10 h-10 rounded-full bg-purple-600 text-white font-serif font-bold text-lg flex items-center justify-center mb-6 shadow-lg shadow-purple-600/30">
-          1
-        </div>
-        <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)] mb-2">1. Point Folders</h3>
-        <p class="text-xs text-[var(--text-mid)] leading-relaxed mb-4">
-          Select one or more source backup folders and a clean target output folder. Built-in overlap guards prevent selecting destination folders inside sources.
-        </p>
-        <span class="text-[10px] font-mono text-purple-400 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20">Overlap Protected</span>
-      </div>
-
-      <!-- Step 2 -->
-      <div class="glass-panel p-6 relative">
-        <div class="w-10 h-10 rounded-full bg-pink-600 text-white font-serif font-bold text-lg flex items-center justify-center mb-6 shadow-lg shadow-pink-600/30">
-          2
-        </div>
-        <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)] mb-2">2. Local Scan</h3>
-        <p class="text-xs text-[var(--text-mid)] leading-relaxed mb-4">
-          Undupe catalogs files in parallel background threads. Size comparison and partial head/tail checks filter out unique items instantly before SHA-256 verification.
-        </p>
-        <span class="text-[10px] font-mono text-pink-400 bg-pink-500/10 px-2 py-1 rounded border border-pink-500/20">Multi-threaded Hashing</span>
-      </div>
-
-      <!-- Step 3 -->
-      <div class="glass-panel p-6 relative">
-        <div class="w-10 h-10 rounded-full bg-sky-600 text-white font-serif font-bold text-lg flex items-center justify-center mb-6 shadow-lg shadow-sky-600/30">
-          3
-        </div>
-        <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)] mb-2">3. Visual Review</h3>
-        <p class="text-xs text-[var(--text-mid)] leading-relaxed mb-4">
-          Inspect duplicate groups with thumbnail previews. Undupe defaults to keeping the newest modified copy, or you can resolve whole clone folders in 1 click.
-        </p>
-        <span class="text-[10px] font-mono text-sky-400 bg-sky-500/10 px-2 py-1 rounded border border-sky-500/20">Thumbnail & Clone Cards</span>
-      </div>
-
-      <!-- Step 4 -->
-      <div class="glass-panel p-6 relative">
-        <div class="w-10 h-10 rounded-full bg-emerald-600 text-white font-serif font-bold text-lg flex items-center justify-center mb-6 shadow-lg shadow-emerald-600/30">
-          4
-        </div>
-        <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)] mb-2">4. Clean Migration</h3>
-        <p class="text-xs text-[var(--text-mid)] leading-relaxed mb-4">
-          Files are cleanly migrated into categorized output folders (<code class="text-emerald-300">Photos</code>, <code class="text-emerald-300">Videos</code>, <code class="text-emerald-300">Documents</code>, <code class="text-emerald-300">Audio</code>). Choose safe Copy or optional Move mode.
-        </p>
-        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Auto-Categorized</span>
-      </div>
-
-    </div>
-  </section>
-
-  <section id="privacy" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <div class="glass-panel p-8 sm:p-12">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        
-        <div class="lg:col-span-7 space-y-6">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2"/></svg>
-            Zero Trust Architecture
-          </div>
-          <h2 class="font-serif text-3xl sm:text-4xl font-bold text-[var(--text-hi)]">
-            Your memories stay on your machine. Always.
-          </h2>
-          <p class="text-[var(--text-mid)] text-base leading-relaxed">
-            Undupe was specifically created because existing desktop utilities are bloatware or push users toward paid cloud services. Undupe relies on the modern <strong>File System Access API</strong>, giving your browser temporary, sandboxed access to local folders you choose.
-          </p>
-
-          <ul class="space-y-3 text-sm text-[var(--text-hi)]">
-            <li class="flex items-start gap-3">
-              <span class="text-emerald-400 mt-1">✓</span>
-              <span><strong>Zero Network Requests:</strong> After loading the web app page, open your browser's network inspector — zero data is sent anywhere.</span>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="text-emerald-400 mt-1">✓</span>
-              <span><strong>Works Completely Offline:</strong> Fonts and scripts are embedded. Install as a PWA and run on airplanes or offline storage arrays.</span>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="text-emerald-400 mt-1">✓</span>
-              <span><strong>Verify Before Delete:</strong> Move mode size-checks every file write before removing the source original. If anything fails, the original remains untouched.</span>
-            </li>
-            <li class="flex items-start gap-3">
-              <span class="text-emerald-400 mt-1">✓</span>
-              <span><strong>No Overwriting:</strong> Duplicate filenames in output folders automatically receive safe suffixes (<code class="text-xs bg-black/30 px-1 py-0.5 rounded">file (1).jpg</code>).</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="lg:col-span-5">
-          <div class="recess-box p-6 space-y-4 text-center">
-            <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <h3 class="font-serif text-xl font-bold text-[var(--text-hi)]">Desktop Browser Gate</h3>
-            <p class="text-xs text-[var(--text-low)] leading-relaxed">
-              Compatible with <strong>Google Chrome</strong> and <strong>Microsoft Edge</strong> on Windows, macOS, and Linux. Firefox and Safari are currently unsupported due to missing File System Access APIs.
-            </p>
-            <div class="pt-4 border-t border-[var(--border-glass)] flex justify-center gap-4 text-xs font-semibold text-[var(--text-mid)]">
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Chrome Desktop</span>
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Edge Desktop</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <section id="faq" class="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-    <div class="text-center mb-16">
-      <span class="text-xs font-bold uppercase tracking-wider text-purple-400 mb-2 block">Clear Answers</span>
-      <h2 class="font-serif text-3xl sm:text-5xl font-bold text-[var(--text-hi)] mb-4">
-        Frequently asked questions
-      </h2>
-      <p class="text-[var(--text-mid)] text-base">
-        Everything you need to know about how Undupe handles your files.
-      </p>
-    </div>
-
-    <div class="space-y-4" id="faqAccordion">
-      
-      <!-- FAQ 1 -->
-      <div class="glass-panel faq-item cursor-pointer p-6">
-        <div class="flex justify-between items-center gap-4">
-          <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)]">Does Undupe upload my files to any cloud server?</h3>
-          <span class="faq-icon text-[var(--text-low)] transition-transform duration-300">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </span>
-        </div>
-        <div class="faq-answer">
-          <p class="text-sm text-[var(--text-mid)] pt-4 leading-relaxed border-t border-[var(--border-glass)] mt-4">
-            No. Absolutely nothing leaves your device. Undupe runs 100% locally within your browser tab using Web Workers and local cryptographic APIs. There is no backend server, no database, and zero tracking analytics.
-          </p>
-        </div>
-      </div>
-
-      <!-- FAQ 2 -->
-      <div class="glass-panel faq-item cursor-pointer p-6">
-        <div class="flex justify-between items-center gap-4">
-          <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)]">Will it automatically delete my original files?</h3>
-          <span class="faq-icon text-[var(--text-low)] transition-transform duration-300">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </span>
-        </div>
-        <div class="faq-answer">
-          <p class="text-sm text-[var(--text-mid)] pt-4 leading-relaxed border-t border-[var(--border-glass)] mt-4">
-            By default, Undupe runs in <strong>Copy Mode</strong>, which leaves your original files completely untouched and writes organized clean copies into your output folder. If you opt into <strong>Move Mode</strong>, originals are deleted only after the app verifies that the new file was written cleanly and matches the source size exactly.
-          </p>
-        </div>
-      </div>
-
-      <!-- FAQ 3 -->
-      <div class="glass-panel faq-item cursor-pointer p-6">
-        <div class="flex justify-between items-center gap-4">
-          <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)]">What counts as an exact duplicate?</h3>
-          <span class="faq-icon text-[var(--text-low)] transition-transform duration-300">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </span>
-        </div>
-        <div class="faq-answer">
-          <p class="text-sm text-[var(--text-mid)] pt-4 leading-relaxed border-t border-[var(--border-glass)] mt-4">
-            Undupe compares files by their cryptographic SHA-256 byte-for-byte content fingerprint. Filenames, folder paths, and file creation timestamps can be completely different, but if the underlying content bytes match, Undupe identifies them as duplicates.
-          </p>
-        </div>
-      </div>
-
-      <!-- FAQ 4 -->
-      <div class="glass-panel faq-item cursor-pointer p-6">
-        <div class="flex justify-between items-center gap-4">
-          <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)]">How does it handle massive multi-terabyte drives?</h3>
-          <span class="faq-icon text-[var(--text-low)] transition-transform duration-300">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </span>
-        </div>
-        <div class="faq-answer">
-          <p class="text-sm text-[var(--text-mid)] pt-4 leading-relaxed border-t border-[var(--border-glass)] mt-4">
-            Undupe uses a 3-tiered hashing architecture to minimize disk I/O. First, files are grouped by exact size. Unique file sizes are immediately ignored. Next, candidate duplicates undergo a quick partial head/tail fingerprint scan. Full SHA-256 hashing is only performed on actual candidate groups, keeping your memory usage light and processing speeds fast.
-          </p>
-        </div>
-      </div>
-
-      <!-- FAQ 5 -->
-      <div class="glass-panel faq-item cursor-pointer p-6">
-        <div class="flex justify-between items-center gap-4">
-          <h3 class="font-serif text-lg font-semibold text-[var(--text-hi)]">Why is Chrome or Edge required on Desktop?</h3>
-          <span class="faq-icon text-[var(--text-low)] transition-transform duration-300">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </span>
-        </div>
-        <div class="faq-answer">
-          <p class="text-sm text-[var(--text-mid)] pt-4 leading-relaxed border-t border-[var(--border-glass)] mt-4">
-            Undupe relies on the W3C File System Access API (`showDirectoryPicker`), which allows web apps to directly read and write folders on desktop drives without uploading files through HTML forms. Currently, Chromium-based desktop browsers (Google Chrome, Microsoft Edge, Brave) support this API, whereas Safari and Firefox do not yet support it.
-          </p>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <section class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-    <div class="relative rounded-3xl p-10 sm:p-16 overflow-hidden text-center bg-gradient-to-br from-purple-900/60 via-pink-950/40 to-sky-950/50 border border-purple-500/30">
-      <div class="relative z-10 max-w-3xl mx-auto space-y-6">
-        <h2 class="font-serif text-3xl sm:text-5xl font-bold text-white">
-          Ready to clean up years of backup clutter?
-        </h2>
-        <p class="text-purple-200 text-base sm:text-lg">
-          No signups, no credit cards, and no software installations. Open Undupe and start scanning your drives in seconds.
-        </p>
-        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href="https://johnlaz.github.io/undupe/app/index.html" target="_blank" rel="noopener" class="w-full sm:w-auto btn-hero px-8 py-4 rounded-2xl text-base font-bold flex items-center justify-center gap-3">
-            <span>Launch Undupe Now</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
-
+  </div>
+</section>
 </main>
 
-<footer class="border-t border-[var(--glass-edge)] bg-[var(--bg-deep)] py-12 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-[var(--text-low)]">
-    <div class="flex items-center gap-3">
-      <span class="font-serif text-sm font-bold text-[var(--text-hi)]">Undupe</span>
-      <span>•</span>
-      <span>Created by LAZLAB Creations</span>
-    </div>
-    <div class="flex items-center gap-6">
-      <a href="#features" class="hover:text-[var(--text-hi)] transition-colors">Features</a>
-      <a href="#privacy" class="hover:text-[var(--text-hi)] transition-colors">Privacy</a>
-      <a href="#faq" class="hover:text-[var(--text-hi)] transition-colors">FAQ</a>
-      <a href="https://github.com/johnlaz/undupe" target="_blank" rel="noopener" class="hover:text-[var(--text-hi)] transition-colors">GitHub Repository</a>
-    </div>
-    <div>
-      © 2026 Undupe. Runs 100% locally in browser.
-    </div>
+<footer>
+  <div class="container foot">
+    <a class="logo" href="#top" aria-label="Undupe home"><svg class="emblem" viewBox="-5.5 -3 348.5 443.5" aria-hidden="true" focusable="false">
+<g transform="translate(-25,-25)">
+  <rect x="50" y="50" width="220" height="290" rx="32" fill="url(#ud-back)" stroke="#38bdf8" stroke-width="3" stroke-dasharray="10 8" stroke-opacity="0.6"/>
+  <rect x="80" y="90" width="100" height="12" rx="6" fill="#38bdf8" fill-opacity="0.4"/>
+  <rect x="80" y="114" width="140" height="8" rx="4" fill="#38bdf8" fill-opacity="0.2"/>
+  <rect x="80" y="132" width="110" height="8" rx="4" fill="#38bdf8" fill-opacity="0.15"/>
+</g>
+<g transform="translate(25,25)" filter="url(#ud-glowP)">
+  <rect x="50" y="50" width="240" height="310" rx="36" fill="url(#ud-front)"/>
+  <path d="M 50 86 A 36 36 0 0 1 86 50 L 254 50 A 36 36 0 0 1 290 86 L 290 140 L 50 210 Z" fill="#ffffff" fill-opacity="0.12"/>
+  <rect x="80" y="100" width="180" height="110" rx="16" fill="#090d16" fill-opacity="0.5" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25"/>
+  <path d="M 95 165 Q 115 125, 135 160 T 175 140 T 215 170 T 245 150" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 95 180 Q 120 150, 145 175 T 205 160 T 245 185" fill="none" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" stroke-opacity="0.7"/>
+  <circle cx="215" cy="170" r="6" fill="#ffffff"/>
+  <rect x="80" y="235" width="130" height="12" rx="6" fill="#ffffff" fill-opacity="0.95"/>
+  <rect x="80" y="257" width="90" height="10" rx="5" fill="#f472b6" fill-opacity="0.8"/>
+  <rect x="80" y="277" width="110" height="10" rx="5" fill="#38bdf8" fill-opacity="0.6"/>
+</g>
+<g transform="translate(10,10)" filter="url(#ud-glowE)">
+  <circle cx="65" cy="350" r="50" fill="url(#ud-emerald)" stroke="#ffffff" stroke-width="5"/>
+  <path d="M 40 350 L 58 368 L 92 330" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg><svg class="wm" viewBox="40 -714 4022 727" role="img" aria-label="Undupe" focusable="false"><path class="wm-un" d="M267 -708V-309Q267 -260 288.5 -231.5Q310 -203 358 -203Q406 -203 429 -231.5Q452 -260 452 -309V-708H673V-309Q673 -208 631 -136.5Q589 -65 516 -29Q443 7 353 7Q263 7 193.5 -29Q124 -65 85 -136Q46 -207 46 -309V-708ZM1433 0H1211L976 -356V0H754V-708H976L1211 -346V-708H1433Z"/><path fill="url(#wm-grad)" d="M2181 -356Q2181 -255 2136 -174Q2091 -93 2007.5 -46.5Q1924 0 1813 0H1518V-708H1813Q1924 -708 2007.5 -663Q2091 -618 2136 -538Q2181 -458 2181 -356ZM1956 -356Q1956 -432 1912 -473Q1868 -514 1793 -514H1740V-198H1793Q1868 -198 1912 -239Q1956 -280 1956 -356ZM2463 -708V-309Q2463 -260 2484.5 -231.5Q2506 -203 2554 -203Q2602 -203 2625 -231.5Q2648 -260 2648 -309V-708H2869V-309Q2869 -208 2827 -136.5Q2785 -65 2712 -29Q2639 7 2549 7Q2459 7 2389.5 -29Q2320 -65 2281 -136Q2242 -207 2242 -309V-708ZM3260 -225H3172V0H2950V-708H3260Q3390 -708 3459.5 -642Q3529 -576 3529 -465Q3529 -398 3498 -343.5Q3467 -289 3406.5 -257Q3346 -225 3260 -225ZM3304 -465Q3304 -530 3235 -530H3172V-400H3235Q3304 -400 3304 -465ZM3806 -531V-444H4026V-277H3806V-177H4056V0H3584V-708H4056V-531Z"/></svg></a>
+    <nav aria-label="Footer"><a href="app/">Launch app</a><a href="#how">How it works</a><a href="#trust">Safety</a><a href="#faq">FAQ</a></nav>
+    <small>Made by LAZLAB Creations</small>
   </div>
 </footer>
 
 <script>
-(function() {
-  "use strict";
-
-  // Theme Management
-  const themeToggleBtn = document.getElementById("themeToggleBtn");
-  const themeIcon = document.getElementById("themeIcon");
-  const themeMeta = document.getElementById("themeColorMeta");
-
-  function sunSvg() {
-    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
-  }
-  function moonSvg() {
-    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
-  }
-
-  function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    if (themeMeta) themeMeta.setAttribute("content", theme === "light" ? "#f3f1fb" : "#070b14");
-    if (themeIcon) themeIcon.innerHTML = theme === "light" ? moonSvg() : sunSvg();
-    try { localStorage.setItem("archiveSanitizerTheme", theme); } catch(e) {}
-  }
-
-  let savedTheme = null;
-  try { savedTheme = localStorage.getItem("archiveSanitizerTheme"); } catch(e) {}
-  if (!savedTheme) {
-    savedTheme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
-  }
-  applyTheme(savedTheme);
-
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener("click", () => {
-      const current = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
-      applyTheme(current === "light" ? "dark" : "light");
-    });
-  }
-
-  // Interactive FAQ Accordion
-  const faqItems = document.querySelectorAll(".faq-item");
-  faqItems.forEach(item => {
-    item.addEventListener("click", () => {
-      const isOpen = item.classList.contains("open");
-      faqItems.forEach(i => i.classList.remove("open"));
-      if (!isOpen) {
-        item.classList.add("open");
-      }
-    });
-  });
-
-  // Storage Estimator Calculator Logic
-  const calcDriveInput = document.getElementById("calcDriveInput");
-  const calcRatioInput = document.getElementById("calcRatioInput");
-  const calcHourlyInput = document.getElementById("calcHourlyInput");
-
-  const calcDriveValue = document.getElementById("calcDriveValue");
-  const calcRatioValue = document.getElementById("calcRatioValue");
-  const calcHourlyValue = document.getElementById("calcHourlyValue");
-
-  const calcResultGB = document.getElementById("calcResultGB");
-  const calcResultHours = document.getElementById("calcResultHours");
-  const calcResultSavings = document.getElementById("calcResultSavings");
-
-  function updateCalculator() {
-    if (!calcDriveInput || !calcRatioInput || !calcHourlyInput) return;
-
-    const driveGB = parseInt(calcDriveInput.value, 10);
-    const ratioPercent = parseInt(calcRatioInput.value, 10);
-    const hourlyRate = parseInt(calcHourlyInput.value, 10);
-
-    // Format Input Labels
-    if (driveGB >= 1000) {
-      calcDriveValue.textContent = `${(driveGB / 1000).toFixed(driveGB % 1000 === 0 ? 0 : 1)} TB (${driveGB.toLocaleString()} GB)`;
-    } else {
-      calcDriveValue.textContent = `${driveGB} GB`;
-    }
-
-    calcRatioValue.textContent = `${ratioPercent}%`;
-    calcHourlyValue.textContent = `$${hourlyRate} / hr`;
-
-    // Calculation formulas
-    const reclaimedGB = Math.round(driveGB * (ratioPercent / 100));
-    // Estimate manual review time: ~12 GB per hour manually reviewing
-    const hoursSaved = (reclaimedGB / 12).toFixed(1);
-    // Dollar value of manual time saved
-    const totalTimeValue = Math.round(hoursSaved * hourlyRate);
-
-    if (calcResultGB) {
-      calcResultGB.textContent = reclaimedGB >= 1000 
-        ? `${(reclaimedGB / 1000).toFixed(1)} TB (${reclaimedGB.toLocaleString()} GB)` 
-        : `${reclaimedGB.toLocaleString()} GB`;
-    }
-    if (calcResultHours) calcResultHours.textContent = `${hoursSaved} hrs`;
-    if (calcResultSavings) calcResultSavings.textContent = `$${totalTimeValue.toLocaleString()}`;
-  }
-
-  if (calcDriveInput && calcRatioInput && calcHourlyInput) {
-    calcDriveInput.addEventListener("input", updateCalculator);
-    calcRatioInput.addEventListener("input", updateCalculator);
-    calcHourlyInput.addEventListener("input", updateCalculator);
-    updateCalculator();
-  }
-
+(function(){
+  var root=document.documentElement, $=function(s){return document.querySelector(s);};
+  /* theme */
+  var sun='<circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/>';
+  var moon='<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>';
+  function paint(){ var t=root.getAttribute('data-theme'); $('#themeIcon').innerHTML=t==='light'?moon:sun;
+    $('#themeColorMeta').setAttribute('content',t==='light'?'#f3f1fb':'#070b14'); }
+  paint();
+  $('#themeBtn').addEventListener('click',function(){
+    var t=root.getAttribute('data-theme')==='light'?'dark':'light'; root.setAttribute('data-theme',t);
+    try{localStorage.setItem('archiveSanitizerTheme',t);}catch(e){} paint(); });
+  /* nav border on scroll */
+  var nav=$('#nav'); function onScroll(){ nav.classList.toggle('scrolled',window.scrollY>8); } onScroll(); window.addEventListener('scroll',onScroll,{passive:true});
+  /* reveal on scroll */
+  var els=[].slice.call(document.querySelectorAll('.reveal'));
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} }); },{threshold:0.12,rootMargin:'0px 0px -6% 0px'});
+    els.forEach(function(el){ io.observe(el); });
+  } else els.forEach(function(el){ el.classList.add('in'); });
+  /* showcase tabs */
+  var caps={setup:'Pick your folders, choose a rule, and press Begin scan.',review:'Every duplicate group, with thumbnails. Change any decision in a click.',done:'A summary of what was organized, plus a breakdown by type and year.',browse:'Search, sort and preview your whole archive without opening Explorer.'};
+  var tabs=[].slice.call(document.querySelectorAll('.tab'));
+  function select(id){ tabs.forEach(function(t){ var on=t.id==='t-'+id; t.setAttribute('aria-selected',on); t.tabIndex=on?0:-1; });
+    ['setup','review','done','browse'].forEach(function(k){ $('#p-'+k).hidden=(k!==id); }); $('#cap').textContent=caps[id]; }
+  tabs.forEach(function(t,i){ t.tabIndex=i===0?0:-1;
+    t.addEventListener('click',function(){ select(t.id.slice(2)); });
+    t.addEventListener('keydown',function(e){ var n=null; if(e.key==='ArrowRight')n=tabs[(i+1)%tabs.length]; if(e.key==='ArrowLeft')n=tabs[(i-1+tabs.length)%tabs.length];
+      if(n){ e.preventDefault(); n.focus(); select(n.id.slice(2)); } }); });
+  /* browser support hint */
+  if(!window.showDirectoryPicker) $('#compat').classList.add('show');
 })();
 </script>
 </body>

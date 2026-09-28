@@ -11,7 +11,8 @@
 </p>
 
 <p align="center">
-  <a href="https://johnlaz.github.io/undupe/"><b>Open Undupe &rarr;</b></a>
+  <a href="https://johnlaz.github.io/undupe/app/"><b>Launch Undupe &rarr;</b></a>
+  &nbsp;&middot;&nbsp; <a href="https://johnlaz.github.io/undupe/">Website</a>
   &nbsp;&middot;&nbsp; Chrome &amp; Edge on desktop
   &nbsp;&middot;&nbsp; Free
 </p>
@@ -19,7 +20,7 @@
 <br>
 
 <p align="center">
-  <img src="screenshot-review.png" alt="Reviewing duplicates, with a folder-clone card and thumbnails" width="92%">
+  <img src="shot-review-dark.webp" alt="Reviewing duplicates, with a folder-clone card and thumbnails" width="92%">
 </p>
 
 ---
@@ -128,28 +129,34 @@ They do not support the browser API that lets a web page work with real folders 
 
 ## Host your own copy
 
-Undupe is a static site: no build step, no dependencies, no server.
+Undupe is a static site: no build step, no dependencies, no server. Put this folder in a GitHub repository,
+then turn on **Settings &rarr; Pages &rarr; Deploy from a branch &rarr; `main` / `(root)`**.
 
-1. Put every file in this folder in the root of a GitHub repository.
-2. **Settings &rarr; Pages &rarr; Deploy from a branch &rarr; `main` / `(root)`.**
-3. Visit `https://<you>.github.io/<repo>/`.
+```
+/                          the landing page
+  index.html
+  og-image.png             link-preview image
+  shot-*.webp, banner.png  images for the landing page and this README
+  README.md
+  app/                     the app itself
+    index.html             the entire app: HTML, CSS and JavaScript in one file
+    manifest.webmanifest   install metadata
+    sw.js                  offline cache and update prompt
+    icon-*.png, apple-touch-icon.png, favicon.*
+    dm-sans.woff2, playfair-display.woff2   self-hosted fonts (the landing page reuses them)
+```
 
-| File | Purpose |
-| --- | --- |
-| `index.html` | The entire app: HTML, CSS and JavaScript in one file |
-| `manifest.webmanifest`, `sw.js` | Install metadata, offline cache and update prompt |
-| `icon-*.png`, `apple-touch-icon.png`, `favicon.*` | App and browser icons |
-| `dm-sans.woff2`, `playfair-display.woff2` | Self-hosted fonts, so nothing loads from a third party |
-| `banner.png`, `screenshot-*.png` | Images for this README (not used by the app) |
+The website lives at `https://<you>.github.io/<repo>/` and the app at `https://<you>.github.io/<repo>/app/`.
+The app installs from its own address, so its icon and offline cache are scoped to `/app/`.
 
 **Releasing an update:** replace the files and push. Installed copies pick up the change on their next
-launch. To move everyone over immediately, bump `VERSION` in `sw.js`; the app then offers a
+launch. To move everyone over immediately, bump `VERSION` in `app/sw.js`; the app then offers a
 "Reload to update" prompt and never reloads on its own, in case a scan is running.
 
 <p align="center">
-  <img src="screenshot-review-light.png" alt="Undupe in light mode" width="46%">
+  <img src="shot-review-light.webp" alt="Undupe in light mode" width="46%">
   &nbsp;
-  <img src="screenshot-browse.png" alt="Browsing and searching an entire archive" width="46%">
+  <img src="shot-browse-dark.webp" alt="Browsing and searching an entire archive" width="46%">
 </p>
 
 <p align="center"><sub>Made by LAZLAB Creations</sub></p>
