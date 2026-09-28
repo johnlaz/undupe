@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://johnlaz.github.io/undupe/app/"><b>Launch Undupe &rarr;</b></a>
-  &nbsp;&middot;&nbsp; <a href="https://johnlaz.github.io/undupe/">Website</a>
+  &nbsp;&middot;&nbsp; <a href="https://johnlaz.github.io/undupe/">Website &amp; download</a>
   &nbsp;&middot;&nbsp; Chrome &amp; Edge on desktop
   &nbsp;&middot;&nbsp; Free
 </p>
@@ -93,6 +93,11 @@ Your files are precious, so Undupe is conservative by design:
 **Install app** in the header (or use the install icon in the address bar). It then runs in its own window
 and launches offline.
 
+**Run it from a file:** press **Download app** on the website to save `undupe.html`, a single self-contained
+file with its fonts and icons built in. Double-click it (or drag it into Chrome or Edge) and it runs fully
+offline, with no server and no internet. A downloaded copy can't be installed as a desktop app, so use the
+online version for that. To update, download it again.
+
 **Requirements:** a desktop Chrome or Edge browser. Undupe relies on the File System Access API to read and
 write real folders, which Firefox and Safari do not offer yet.
 
@@ -121,6 +126,10 @@ model and dimensions. Other formats fall back to the file date.
 It is built with large archives in mind (tiered fingerprinting, background workers, chunked hashing), and scan
 speed is mostly limited by how fast your drive can be read. Start with a small folder to see how it behaves on
 your hardware.
+
+**Can I run it without the website?**
+Yes. Use the **Download app** button on the website to get one self-contained `undupe.html` file, then open it
+in Chrome or Edge.
 
 **Why doesn't it work in Firefox or Safari?**
 They do not support the browser API that lets a web page work with real folders on your drive.
