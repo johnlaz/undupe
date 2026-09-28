@@ -1,0 +1,2511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Undupe</title>
+<meta name="description" content="Find exact duplicate files across years of backups, keep the copy you want, and organize the rest. Runs entirely in your browser: nothing leaves your device.">
+<meta name="theme-color" id="themeColorMeta" content="#070b14">
+<meta name="color-scheme" content="dark light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Undupe">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="dm-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="playfair-display.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* =====================================================================
+     UNDUPE — glass design system
+     Tokens first, then base, then components. Every color is a variable
+     so dark/light stay in lock-step.
+     ===================================================================== */
+
+  /* ---------- fonts (self-hosted, so the app works fully offline) ---------- */
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:100 1000;font-display:swap;src:url(dm-sans.woff2) format('woff2');}
+  @font-face{font-family:'Playfair Display';font-style:normal;font-weight:400 900;font-display:swap;src:url(playfair-display.woff2) format('woff2');}
+
+  /* ---------- tokens: dark ---------- */
+  :root{
+    color-scheme:dark;
+    --bg-deep:#070b14;
+    --panel-solid:#111828;
+
+    --text-hi:#f1f3fa;
+    --text-mid:#aab4ca;
+    --text-low:#7c87a1;
+
+    --accent:#a855f7;
+    --accent-bright:#c084fc;
+    --accent-deep:#7c3aed;
+    --accent-rgb:168,85,247;
+    --accent-bright-rgb:192,132,252;
+    --accent2:#38bdf8;
+    --accent2-bright:#7dd3fc;
+    --accent2-deep:#0284c7;
+    --accent2-rgb:56,189,248;
+    --success:#34d399;
+    --success-rgb:52,211,153;
+    --danger:#e0685f;
+    --danger-bright:#f0897f;
+    --danger-rgb:224,104,95;
+    --warn-text:#f2b3ad;
+
+    --hero-grad:linear-gradient(135deg,#a855f7 0%,#e11d48 100%);
+    --hero-rgb:225,29,72;
+    --bar-grad:linear-gradient(90deg,#a855f7 0%,#ec4899 55%,#38bdf8 100%);
+
+    /* glass */
+    --glass:linear-gradient(150deg,rgba(255,255,255,0.085) 0%,rgba(255,255,255,0.028) 100%);
+    --glass-strong:linear-gradient(150deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.05) 100%);
+    --glass-edge:rgba(255,255,255,0.11);
+    --glass-edge-hi:rgba(255,255,255,0.24);
+    --glass-shadow:0 28px 60px -28px rgba(0,0,0,0.75),0 2px 6px rgba(0,0,0,0.25);
+    --inset-hi:inset 0 1px 0 rgba(255,255,255,0.14);
+    --sheen:linear-gradient(180deg,rgba(255,255,255,0.09) 0%,rgba(255,255,255,0) 100%);
+    --border-glass:rgba(255,255,255,0.08);
+    --border-glass-hi:rgba(255,255,255,0.18);
+
+    /* recessed wells (inputs, stat boxes, rows) */
+    --recess:rgba(4,7,16,0.38);
+    --inset-recess:inset 0 1px 3px rgba(0,0,0,0.38);
+    --hover-surface:rgba(255,255,255,0.07);
+    --toggle-track-off:rgba(255,255,255,0.14);
+    --scrollbar-thumb:rgba(255,255,255,0.14);
+    --scrollbar-thumb-hover:rgba(255,255,255,0.26);
+    --overlay-scrim:rgba(3,5,12,0.62);
+
+    /* ambient background */
+    --orbs:
+      radial-gradient(900px 640px at 6% 10%,rgba(168,85,247,0.30),transparent 62%),
+      radial-gradient(760px 560px at 16% 80%,rgba(236,72,153,0.13),transparent 60%),
+      radial-gradient(860px 620px at 94% 90%,rgba(56,189,248,0.17),transparent 60%),
+      radial-gradient(700px 500px at 90% 6%,rgba(99,102,241,0.11),transparent 60%);
+    --grid:rgba(148,163,196,0.065);
+
+    /* wordmark */
+    --wm-un:#ffffff;
+    --wm-g1:#c084fc;
+    --wm-g2:#a855f7;
+    --wm-g3:#f43f5e;
+
+    --radius:18px;
+    --radius-sm:12px;
+  }
+
+  /* ---------- tokens: light ---------- */
+  html[data-theme="light"]{
+    color-scheme:light;
+    --bg-deep:#f3f1fb;
+    --panel-solid:#ffffff;
+
+    --text-hi:#151e31;
+    --text-mid:#4b5670;
+    --text-low:#6a7387;
+
+    --accent:#9333ea;
+    --accent-bright:#7e22ce;
+    --accent-deep:#6b21a8;
+    --accent-rgb:147,51,234;
+    --accent-bright-rgb:126,34,206;
+    --accent2:#0284c7;
+    --accent2-bright:#0369a1;
+    --accent2-deep:#075985;
+    --accent2-rgb:2,132,199;
+    --success:#059669;
+    --success-rgb:5,150,105;
+    --danger:#c1453c;
+    --danger-bright:#a63a32;
+    --danger-rgb:193,69,60;
+    --warn-text:#963931;
+
+    --hero-grad:linear-gradient(135deg,#9333ea 0%,#e11d48 100%);
+    --hero-rgb:225,29,72;
+    --bar-grad:linear-gradient(90deg,#9333ea 0%,#db2777 55%,#0ea5e9 100%);
+
+    --glass:linear-gradient(150deg,rgba(255,255,255,0.78) 0%,rgba(255,255,255,0.46) 100%);
+    --glass-strong:linear-gradient(150deg,rgba(255,255,255,0.95) 0%,rgba(255,255,255,0.7) 100%);
+    --glass-edge:rgba(21,30,49,0.09);
+    --glass-edge-hi:rgba(21,30,49,0.2);
+    --glass-shadow:0 26px 50px -30px rgba(88,28,135,0.38),0 1px 3px rgba(21,30,49,0.07);
+    --inset-hi:inset 0 1px 0 rgba(255,255,255,0.95);
+    --sheen:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(255,255,255,0) 100%);
+    --border-glass:rgba(21,30,49,0.08);
+    --border-glass-hi:rgba(21,30,49,0.18);
+
+    --recess:rgba(21,30,49,0.045);
+    --inset-recess:inset 0 1px 2px rgba(21,30,49,0.09);
+    --hover-surface:rgba(21,30,49,0.055);
+    --toggle-track-off:rgba(21,30,49,0.16);
+    --scrollbar-thumb:rgba(21,30,49,0.18);
+    --scrollbar-thumb-hover:rgba(21,30,49,0.3);
+    --overlay-scrim:rgba(21,30,49,0.36);
+
+    --orbs:
+      radial-gradient(900px 640px at 6% 8%,rgba(168,85,247,0.22),transparent 62%),
+      radial-gradient(760px 560px at 16% 82%,rgba(236,72,153,0.12),transparent 60%),
+      radial-gradient(860px 620px at 94% 90%,rgba(56,189,248,0.20),transparent 60%),
+      radial-gradient(700px 500px at 90% 6%,rgba(99,102,241,0.10),transparent 60%);
+    --grid:rgba(21,30,49,0.05);
+
+    --wm-un:#151e31;
+    --wm-g1:#7e22ce;
+    --wm-g2:#9333ea;
+    --wm-g3:#e11d48;
+  }
+
+  /* ---------- base ---------- */
+  *{box-sizing:border-box;}
+  html{height:100%;background:var(--bg-deep);}
+  body{
+    margin:0;min-height:100%;
+    color:var(--text-hi);
+    font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  /* ambient light + faint grid, fixed behind everything so the glass has something to blur */
+  body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:var(--orbs);}
+  body::after{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:150px 150px;
+    -webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 28%,#000 15%,transparent 78%);
+            mask-image:radial-gradient(ellipse 80% 70% at 50% 28%,#000 15%,transparent 78%);
+  }
+  h1,h2,h3,.serif{font-family:'Playfair Display',Georgia,serif;}
+  ::selection{background:var(--accent);color:#ffffff;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:8px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover);}
+  a{color:var(--accent-bright);}
+  button{font-family:inherit;}
+  .hidden{display:none !important;}
+  :focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px;}
+
+  /* ---------- header / brand ---------- */
+  .app-shell{max-width:1180px;margin:0 auto;padding:28px 20px 72px;}
+  header.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:30px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:16px;}
+  .emblem{height:52px;width:auto;flex-shrink:0;overflow:visible;}
+  .wordmark{margin:0;line-height:0;}
+  .wm{height:28px;width:auto;display:block;}
+  .wm .wm-un{fill:var(--wm-un);}
+  .brand-text p{margin:9px 0 0;font-size:0.8rem;color:var(--text-low);}
+  .topbar-actions{display:flex;align-items:center;gap:10px;}
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;
+    border:1px solid var(--glass-edge);background:var(--glass);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--inset-hi);
+    font-size:0.78rem;color:var(--text-mid);
+  }
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--text-low);}
+  .pill.ok .dot{background:var(--success);box-shadow:0 0 8px rgba(var(--success-rgb),0.9);}
+
+  /* ---------- buttons ---------- */
+  .btn{
+    position:relative;appearance:none;display:inline-flex;align-items:center;gap:8px;
+    padding:10px 18px;border-radius:12px;font-size:0.88rem;font-weight:500;cursor:pointer;
+    color:var(--text-hi);background:var(--glass);border:1px solid var(--glass-edge);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    box-shadow:var(--inset-hi),0 8px 20px -12px rgba(0,0,0,0.5);
+    transition:transform .12s ease,background .15s ease,border-color .15s ease,filter .15s ease,box-shadow .15s ease;
+  }
+  .btn:hover{background:var(--glass-strong);border-color:var(--glass-edge-hi);transform:translateY(-1px);}
+  .btn:active{transform:translateY(0) scale(0.98);}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+  .btn-ghost{background:transparent;box-shadow:none;}
+  .btn-ghost:hover{background:var(--hover-surface);}
+  .btn-primary,.btn-hero{
+    color:#ffffff;font-weight:700;border-color:rgba(255,255,255,0.28);
+    text-shadow:0 1px 2px rgba(0,0,0,0.25);
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,var(--accent) 0%,var(--accent-deep) 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 12px 28px -12px rgba(var(--accent-rgb),0.85);
+  }
+  .btn-hero{
+    background:var(--hero-grad);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 12px 28px -12px rgba(var(--hero-rgb),0.7);
+  }
+  .btn-primary:hover,.btn-hero:hover{filter:brightness(1.1) saturate(1.05);}
+  .btn-primary:hover{background:linear-gradient(135deg,var(--accent) 0%,var(--accent-deep) 100%);}
+  .btn-hero:hover{background:var(--hero-grad);}
+  .btn-danger{border-color:rgba(var(--danger-rgb),0.45);color:var(--danger-bright);}
+  .btn-danger:hover{background:rgba(var(--danger-rgb),0.1);border-color:rgba(var(--danger-rgb),0.6);}
+  .btn-sm{padding:7px 13px;font-size:0.78rem;border-radius:10px;}
+
+  /* ---------- layout: rail + panels ---------- */
+  .workspace{display:grid;grid-template-columns:64px 1fr;gap:22px;align-items:start;}
+
+  .rail{display:flex;flex-direction:column;align-items:center;gap:4px;position:sticky;top:20px;}
+  .rail-step{
+    width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'Playfair Display',Georgia,serif;font-weight:600;font-size:0.95rem;
+    border:1px solid var(--glass-edge);color:var(--text-low);background:var(--glass);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:var(--inset-hi);
+  }
+  .rail-step.active{
+    color:#ffffff;border-color:rgba(255,255,255,0.3);
+    background:linear-gradient(135deg,var(--accent) 0%,var(--accent-deep) 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 0 0 4px rgba(var(--accent-rgb),0.18),0 10px 24px -8px rgba(var(--accent-rgb),0.8);
+  }
+  .rail-step.done{border-color:rgba(var(--success-rgb),0.5);color:var(--success);background:rgba(var(--success-rgb),0.1);}
+  .rail-line{width:1px;height:22px;background:var(--border-glass-hi);}
+
+  .mobile-stepper{display:none;gap:8px;margin-bottom:18px;overflow-x:auto;}
+  .mobile-stepper .chip{
+    flex-shrink:0;padding:6px 13px;border-radius:999px;font-size:0.75rem;
+    border:1px solid var(--glass-edge);color:var(--text-low);background:var(--glass);
+  }
+  .mobile-stepper .chip.active{border-color:var(--accent-bright);color:var(--accent-bright);}
+  .mobile-stepper .chip.done{border-color:rgba(var(--success-rgb),0.5);color:var(--success);}
+  @media (max-width:720px){ .workspace{grid-template-columns:1fr;} .rail{display:none;} .mobile-stepper{display:flex !important;} }
+
+  .panel{
+    position:relative;isolation:isolate;padding:28px 30px;
+    background:var(--glass);border:1px solid var(--glass-edge);border-radius:var(--radius);
+    -webkit-backdrop-filter:blur(28px) saturate(1.5);backdrop-filter:blur(28px) saturate(1.5);
+    box-shadow:var(--glass-shadow),var(--inset-hi);
+  }
+  .panel::before{
+    content:"";position:absolute;left:0;right:0;top:0;height:110px;z-index:-1;pointer-events:none;
+    border-radius:var(--radius) var(--radius) 0 0;background:var(--sheen);opacity:0.55;
+  }
+  .panel + .panel{margin-top:18px;}
+  .panel h2{font-size:1.3rem;margin:0 0 4px;font-weight:600;}
+  .panel .sub{color:var(--text-mid);font-size:0.88rem;margin:0 0 22px;line-height:1.5;}
+  .section-label{font-size:0.82rem;color:var(--text-mid);font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+
+  /* ---------- step 1: setup ---------- */
+  .folder-row{
+    display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:11px 14px;
+    background:var(--recess);border:1px solid var(--border-glass);border-radius:var(--radius-sm);box-shadow:var(--inset-recess);
+  }
+  .folder-row .folder-icon{color:var(--accent2-bright);flex-shrink:0;}
+  .folder-row .folder-name{flex-grow:1;font-size:0.86rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .folder-row .remove-btn{background:none;border:none;color:var(--text-low);cursor:pointer;padding:4px;border-radius:6px;flex-shrink:0;}
+  .folder-row .remove-btn:hover{color:var(--danger-bright);background:rgba(var(--danger-rgb),0.12);}
+  .empty-folder-hint{
+    border:1px dashed var(--border-glass-hi);border-radius:var(--radius-sm);
+    padding:18px;text-align:center;color:var(--text-low);font-size:0.85rem;margin-bottom:8px;
+  }
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  @media (max-width:720px){ .grid-2{grid-template-columns:1fr;} }
+  .option-card{
+    padding:16px;margin-bottom:12px;background:var(--recess);
+    border:1px solid var(--border-glass);border-radius:var(--radius-sm);box-shadow:var(--inset-recess);
+  }
+  .radio-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;cursor:pointer;}
+  .radio-row input{margin-top:3px;accent-color:var(--accent);}
+  .rr-title{font-size:0.88rem;font-weight:500;}
+  .rr-desc{font-size:0.76rem;color:var(--text-low);margin-top:1px;}
+
+  .toggle-switch{position:relative;width:46px;height:26px;flex-shrink:0;}
+  .toggle-switch input{opacity:0;width:0;height:0;}
+  .toggle-switch .track{position:absolute;inset:0;background:var(--toggle-track-off);border-radius:999px;transition:.18s;cursor:pointer;box-shadow:var(--inset-recess);}
+  .toggle-switch .track::before{
+    content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#ffffff;
+    border-radius:50%;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,0.35);
+  }
+  .toggle-switch input:checked + .track{background:linear-gradient(135deg,var(--accent),var(--accent-deep));box-shadow:0 0 14px -2px rgba(var(--accent-rgb),0.7);}
+  .toggle-switch input:checked + .track::before{transform:translateX(20px);}
+  .toggle-switch input:focus-visible + .track{outline:2px solid var(--accent-bright);outline-offset:2px;}
+
+  .warn-note{
+    display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:12px 14px;
+    background:rgba(var(--danger-rgb),0.09);border:1px solid rgba(var(--danger-rgb),0.3);
+    border-radius:var(--radius-sm);font-size:0.8rem;color:var(--warn-text);
+  }
+  .bundle-note{
+    display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;padding:12px 14px;
+    background:rgba(var(--accent-rgb),0.07);border:1px solid rgba(var(--accent-rgb),0.24);
+    border-radius:var(--radius-sm);font-size:0.8rem;color:var(--text-mid);
+  }
+  .footer-row{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border-glass);}
+  .footer-row.split{justify-content:space-between;}
+
+  /* ---------- resume banner ---------- */
+  .resume-banner{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    padding:16px 20px;margin-bottom:20px;border-radius:var(--radius);
+    background:linear-gradient(120deg,rgba(var(--accent-rgb),0.16),rgba(var(--accent2-rgb),0.08));
+    border:1px solid rgba(var(--accent-rgb),0.34);
+    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:var(--inset-hi);
+  }
+  .resume-banner .rb-text h3{margin:0 0 3px;font-size:1rem;}
+  .resume-banner .rb-text p{margin:0;color:var(--text-mid);font-size:0.82rem;}
+  .resume-banner .rb-actions{display:flex;gap:8px;flex-shrink:0;}
+
+  /* ---------- progress ---------- */
+  .phase-label{font-size:1rem;color:var(--accent-bright);font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+  .spinner{
+    width:16px;height:16px;border-radius:50%;
+    border:2px solid rgba(var(--accent-bright-rgb),0.25);border-top-color:var(--accent-bright);
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .progress-track{
+    width:100%;height:10px;border-radius:999px;margin-bottom:8px;overflow:hidden;
+    background:var(--recess);border:1px solid var(--border-glass);box-shadow:var(--inset-recess);
+  }
+  .progress-fill{
+    height:100%;width:0%;border-radius:999px;background:var(--bar-grad);
+    box-shadow:0 0 16px rgba(var(--accent-rgb),0.6);transition:width .25s ease;
+  }
+  .progress-fill.indeterminate{width:35% !important;animation:indet 1.4s ease-in-out infinite;}
+  @keyframes indet{0%{margin-left:-35%;}100%{margin-left:100%;}}
+  .progress-meta{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-low);margin-bottom:20px;}
+  .current-path{font-size:0.76rem;color:var(--text-low);font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:20px;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}
+  @media (max-width:600px){ .stat-grid{grid-template-columns:1fr 1fr;} }
+  .stat-box{
+    padding:14px 16px;background:var(--recess);border:1px solid var(--border-glass);
+    border-radius:var(--radius-sm);box-shadow:var(--inset-recess);
+  }
+  .stat-box .stat-label{font-size:0.72rem;color:var(--text-low);}
+  .stat-box .stat-value{font-size:1.4rem;font-weight:700;font-family:'Playfair Display',Georgia,serif;margin-top:3px;color:var(--text-hi);}
+  .stat-box.accent .stat-value{color:var(--accent-bright);}
+  .stat-box.accent2 .stat-value{color:var(--accent2-bright);}
+  .stat-box.danger .stat-value{color:var(--danger-bright);}
+
+  /* ---------- duplicate review ---------- */
+  .dup-summary-bar{
+    display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;
+    margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border-glass);
+  }
+  .dup-group{
+    padding:14px 16px;margin-bottom:12px;background:var(--recess);
+    border:1px solid var(--border-glass);border-radius:var(--radius-sm);box-shadow:var(--inset-recess);
+  }
+  .dup-group-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:0.78rem;color:var(--text-low);font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;}
+  .dup-file-row{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:background .12s;}
+  .dup-file-row:hover{background:var(--hover-surface);}
+  .dup-file-row.chosen{border-color:rgba(var(--success-rgb),0.42);background:rgba(var(--success-rgb),0.08);}
+  .dup-file-row input{accent-color:var(--success);flex-shrink:0;}
+  .dup-file-info{flex-grow:1;min-width:0;}
+  .dup-file-path{font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dup-file-meta{font-size:0.72rem;color:var(--text-low);margin-top:1px;}
+  .keep-tag,.skip-tag{font-size:0.68rem;font-weight:600;padding:2px 9px;border-radius:999px;flex-shrink:0;}
+  .keep-tag{background:rgba(var(--success-rgb),0.15);color:var(--success);border:1px solid rgba(var(--success-rgb),0.38);}
+  .skip-tag{background:var(--recess);color:var(--text-low);border:1px solid var(--border-glass);}
+  .show-more-wrap{text-align:center;margin-top:6px;}
+  .clone-card{
+    padding:14px 16px;margin-bottom:10px;border-radius:var(--radius-sm);
+    border:1px solid rgba(var(--accent2-rgb),0.36);
+    background:linear-gradient(150deg,rgba(var(--accent2-rgb),0.11),rgba(var(--accent2-rgb),0.03));
+    box-shadow:var(--inset-hi);
+  }
+  .clone-title{font-size:0.88rem;line-height:1.5;word-break:break-word;}
+  .clone-title strong{color:var(--accent2-bright);font-weight:600;}
+  .clone-meta{font-size:0.76rem;color:var(--text-low);margin:4px 0 12px;}
+  .clone-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .dup-thumb{
+    width:44px;height:44px;border-radius:9px;flex-shrink:0;overflow:hidden;
+    background:var(--recess);border:1px solid var(--border-glass);
+    display:flex;align-items:center;justify-content:center;color:var(--text-low);
+  }
+  .dup-thumb img,.dup-thumb video{width:100%;height:100%;object-fit:cover;}
+
+  /* ---------- insights ---------- */
+  .insight-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:0.82rem;}
+  .insight-row .insight-label{width:120px;flex-shrink:0;color:var(--text-mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .insight-row .insight-bar-track{flex-grow:1;height:8px;background:var(--recess);border-radius:999px;overflow:hidden;box-shadow:var(--inset-recess);}
+  .insight-row .insight-bar-fill{display:block;height:100%;background:var(--bar-grad);border-radius:999px;}
+  .insight-row .insight-value{width:86px;text-align:right;flex-shrink:0;font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:0.74rem;color:var(--text-low);}
+  .insight-caption{font-size:0.72rem;color:var(--text-low);margin:-4px 0 10px;}
+
+  /* ---------- organize preview ---------- */
+  .category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .category-tile{padding:16px;background:var(--recess);border:1px solid var(--border-glass);border-radius:var(--radius-sm);box-shadow:var(--inset-recess);}
+  .category-tile .cat-name{font-size:0.9rem;font-weight:600;margin-bottom:6px;}
+  .category-tile .cat-count{font-size:1.5rem;font-family:'Playfair Display',Georgia,serif;color:var(--accent-bright);}
+  .category-tile .cat-size{font-size:0.76rem;color:var(--text-low);margin-top:2px;}
+  .error-log{
+    max-height:160px;overflow-y:auto;margin-top:14px;padding:10px 14px;
+    background:rgba(var(--danger-rgb),0.06);border:1px solid rgba(var(--danger-rgb),0.26);border-radius:var(--radius-sm);
+    font-size:0.76rem;font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;color:var(--warn-text);
+  }
+  .error-log div{padding:3px 0;border-bottom:1px solid rgba(var(--danger-rgb),0.13);}
+
+  /* ---------- done ---------- */
+  .done-hero{text-align:center;padding:20px 0 8px;}
+  .done-hero .done-icon{
+    width:68px;height:68px;border-radius:50%;margin:0 auto 18px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#34d399 0%,#059669 100%);border:4px solid #ffffff;
+    box-shadow:0 0 30px rgba(var(--success-rgb),0.55),0 12px 26px -10px rgba(0,0,0,0.5);
+  }
+  .done-hero h2{font-size:1.7rem;margin-bottom:6px;}
+  .done-hero p{color:var(--text-mid);margin-bottom:0;}
+
+  /* ---------- unsupported-browser gate ---------- */
+  .gate{max-width:520px;margin:12vh auto;text-align:center;padding:0 20px;}
+  .gate .emblem{height:84px;margin:0 auto 18px;display:block;}
+  .gate .wordmark{margin:0 auto 26px;display:flex;justify-content:center;}
+  .gate .wm{height:40px;}
+  .gate h1{font-size:1.5rem;margin-bottom:10px;}
+  .gate p{color:var(--text-mid);font-size:0.92rem;line-height:1.6;}
+
+  /* ---------- inputs ---------- */
+  input[type="text"].bare,select.bare{
+    width:100%;padding:10px 12px;border-radius:10px;font-size:0.85rem;font-family:inherit;
+    color:var(--text-hi);background:var(--recess);border:1px solid var(--border-glass);box-shadow:var(--inset-recess);
+  }
+  input[type="text"].bare::placeholder{color:var(--text-low);}
+  select.bare option{background:var(--panel-solid);color:var(--text-hi);}
+
+  /* ---------- browse overlay ---------- */
+  .browse-overlay{
+    position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:var(--overlay-scrim);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  }
+  .browse-panel{
+    position:relative;isolation:isolate;display:flex;flex-direction:column;
+    width:100%;max-width:980px;max-height:88vh;padding:22px 24px;border-radius:var(--radius);
+    background:var(--glass-strong);border:1px solid var(--glass-edge-hi);
+    -webkit-backdrop-filter:blur(34px) saturate(1.6);backdrop-filter:blur(34px) saturate(1.6);
+    box-shadow:0 40px 90px -30px rgba(0,0,0,0.75),var(--inset-hi);
+  }
+  .browse-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0;}
+  .browse-header h2{font-size:1.2rem;margin:0;}
+  .browse-controls{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;flex-shrink:0;}
+  .browse-controls input{flex:2;min-width:200px;}
+  .browse-controls select{flex:1;min-width:130px;}
+  .browse-meta{font-size:0.76rem;color:var(--text-low);margin-bottom:10px;flex-shrink:0;}
+  .browse-table-wrap{flex-grow:1;overflow-y:auto;border-top:1px solid var(--border-glass);padding-top:6px;}
+  .browse-row{cursor:pointer;border-radius:10px;padding:0 4px;}
+  .browse-row:hover{background:var(--hover-surface);}
+  .browse-row-main{display:flex;align-items:center;gap:12px;padding:7px 6px;}
+  .browse-thumb{width:36px;height:36px;}
+  .browse-col-name{flex-grow:1;min-width:0;}
+  .browse-name{font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .browse-path{font-size:0.7rem;color:var(--text-low);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .browse-col-cat{flex-shrink:0;width:130px;}
+  .browse-col-size{flex-shrink:0;width:80px;text-align:right;font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:0.76rem;color:var(--text-mid);}
+  .browse-col-date{flex-shrink:0;width:96px;text-align:right;font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:0.76rem;color:var(--text-low);}
+  .browse-detail{margin:2px 6px 8px;padding:12px 16px;background:var(--recess);border-radius:10px;box-shadow:var(--inset-recess);font-size:0.8rem;color:var(--text-mid);line-height:1.8;}
+  .browse-detail strong{color:var(--text-hi);font-weight:600;}
+  .browse-pagination{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;font-size:0.8rem;color:var(--text-low);flex-shrink:0;}
+  @media (max-width:640px){ .browse-col-cat,.browse-col-date{display:none;} }
+
+  /* ---------- update toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:80;
+    display:flex;align-items:center;gap:14px;padding:12px 14px 12px 18px;border-radius:14px;
+    background:var(--glass-strong);border:1px solid var(--glass-edge-hi);font-size:0.85rem;
+    -webkit-backdrop-filter:blur(26px) saturate(1.5);backdrop-filter:blur(26px) saturate(1.5);
+    box-shadow:0 24px 50px -20px rgba(0,0,0,0.7),var(--inset-hi);
+  }
+
+  /* ---------- fallbacks ---------- */
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+    .panel,.browse-panel,.toast,.pill,.btn{background:var(--panel-solid);}
+    .btn-primary{background:linear-gradient(135deg,var(--accent) 0%,var(--accent-deep) 100%);}
+    .btn-hero{background:var(--hero-grad);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition-duration:0.01ms !important;}
+    .progress-fill.indeterminate{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+<linearGradient id="ud-back" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/><stop offset="100%" stop-color="#a855f7" stop-opacity="0.05"/></linearGradient>
+<linearGradient id="ud-front" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c084fc"/><stop offset="40%" stop-color="#a855f7"/><stop offset="100%" stop-color="#e11d48"/></linearGradient>
+<linearGradient id="ud-emerald" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#059669"/></linearGradient>
+<filter id="ud-glowP" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#a855f7" flood-opacity="0.5"/></filter>
+<filter id="ud-glowE" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#34d399" flood-opacity="0.6"/></filter>
+
+    <linearGradient id="wm-grad" gradientUnits="userSpaceOnUse" x1="1518" y1="0" x2="4056" y2="0">
+      <stop offset="0" style="stop-color:var(--wm-g1)"/><stop offset="0.5" style="stop-color:var(--wm-g2)"/><stop offset="1" style="stop-color:var(--wm-g3)"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<noscript><p style="padding:24px;font-family:sans-serif">Undupe needs JavaScript to run.</p></noscript>
+
+<!-- ============================================================ -->
+<!-- COMPATIBILITY GATE (shown only if browser lacks File System Access API) -->
+<!-- ============================================================ -->
+<div id="gateScreen" class="gate hidden">
+  <svg class="emblem" viewBox="-5.5 -3 348.5 443.5" aria-hidden="true" focusable="false">
+<g transform="translate(-25,-25)">
+  <rect x="50" y="50" width="220" height="290" rx="32" fill="url(#ud-back)" stroke="#38bdf8" stroke-width="3" stroke-dasharray="10 8" stroke-opacity="0.6"/>
+  <rect x="80" y="90" width="100" height="12" rx="6" fill="#38bdf8" fill-opacity="0.4"/>
+  <rect x="80" y="114" width="140" height="8" rx="4" fill="#38bdf8" fill-opacity="0.2"/>
+  <rect x="80" y="132" width="110" height="8" rx="4" fill="#38bdf8" fill-opacity="0.15"/>
+</g>
+<g transform="translate(25,25)" filter="url(#ud-glowP)">
+  <rect x="50" y="50" width="240" height="310" rx="36" fill="url(#ud-front)"/>
+  <path d="M 50 86 A 36 36 0 0 1 86 50 L 254 50 A 36 36 0 0 1 290 86 L 290 140 L 50 210 Z" fill="#ffffff" fill-opacity="0.12"/>
+  <rect x="80" y="100" width="180" height="110" rx="16" fill="#090d16" fill-opacity="0.5" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25"/>
+  <path d="M 95 165 Q 115 125, 135 160 T 175 140 T 215 170 T 245 150" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 95 180 Q 120 150, 145 175 T 205 160 T 245 185" fill="none" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" stroke-opacity="0.7"/>
+  <circle cx="215" cy="170" r="6" fill="#ffffff"/>
+  <rect x="80" y="235" width="130" height="12" rx="6" fill="#ffffff" fill-opacity="0.95"/>
+  <rect x="80" y="257" width="90" height="10" rx="5" fill="#f472b6" fill-opacity="0.8"/>
+  <rect x="80" y="277" width="110" height="10" rx="5" fill="#38bdf8" fill-opacity="0.6"/>
+</g>
+<g transform="translate(10,10)" filter="url(#ud-glowE)">
+  <circle cx="65" cy="350" r="50" fill="url(#ud-emerald)" stroke="#ffffff" stroke-width="5"/>
+  <path d="M 40 350 L 58 368 L 92 330" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
+  <div class="wordmark"><svg class="wm" viewBox="40 -714 4022 727" role="img" aria-label="Undupe" focusable="false"><path class="wm-un" d="M267 -708V-309Q267 -260 288.5 -231.5Q310 -203 358 -203Q406 -203 429 -231.5Q452 -260 452 -309V-708H673V-309Q673 -208 631 -136.5Q589 -65 516 -29Q443 7 353 7Q263 7 193.5 -29Q124 -65 85 -136Q46 -207 46 -309V-708ZM1433 0H1211L976 -356V0H754V-708H976L1211 -346V-708H1433Z"/><path fill="url(#wm-grad)" d="M2181 -356Q2181 -255 2136 -174Q2091 -93 2007.5 -46.5Q1924 0 1813 0H1518V-708H1813Q1924 -708 2007.5 -663Q2091 -618 2136 -538Q2181 -458 2181 -356ZM1956 -356Q1956 -432 1912 -473Q1868 -514 1793 -514H1740V-198H1793Q1868 -198 1912 -239Q1956 -280 1956 -356ZM2463 -708V-309Q2463 -260 2484.5 -231.5Q2506 -203 2554 -203Q2602 -203 2625 -231.5Q2648 -260 2648 -309V-708H2869V-309Q2869 -208 2827 -136.5Q2785 -65 2712 -29Q2639 7 2549 7Q2459 7 2389.5 -29Q2320 -65 2281 -136Q2242 -207 2242 -309V-708ZM3260 -225H3172V0H2950V-708H3260Q3390 -708 3459.5 -642Q3529 -576 3529 -465Q3529 -398 3498 -343.5Q3467 -289 3406.5 -257Q3346 -225 3260 -225ZM3304 -465Q3304 -530 3235 -530H3172V-400H3235Q3304 -400 3304 -465ZM3806 -531V-444H4026V-277H3806V-177H4056V0H3584V-708H4056V-531Z"/></svg></div>
+  <h1 class="serif">This browser can't run Undupe</h1>
+  <p>Undupe needs direct access to real folders on your drive, which only <strong>Chrome</strong> or <strong>Edge</strong> currently support (the File System Access API). Open this page in one of those browsers to continue.</p>
+</div>
+
+<!-- ============================================================ -->
+<!-- MAIN APP -->
+<!-- ============================================================ -->
+<div id="appRoot" class="app-shell hidden">
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="emblem" viewBox="-5.5 -3 348.5 443.5" aria-hidden="true" focusable="false">
+<g transform="translate(-25,-25)">
+  <rect x="50" y="50" width="220" height="290" rx="32" fill="url(#ud-back)" stroke="#38bdf8" stroke-width="3" stroke-dasharray="10 8" stroke-opacity="0.6"/>
+  <rect x="80" y="90" width="100" height="12" rx="6" fill="#38bdf8" fill-opacity="0.4"/>
+  <rect x="80" y="114" width="140" height="8" rx="4" fill="#38bdf8" fill-opacity="0.2"/>
+  <rect x="80" y="132" width="110" height="8" rx="4" fill="#38bdf8" fill-opacity="0.15"/>
+</g>
+<g transform="translate(25,25)" filter="url(#ud-glowP)">
+  <rect x="50" y="50" width="240" height="310" rx="36" fill="url(#ud-front)"/>
+  <path d="M 50 86 A 36 36 0 0 1 86 50 L 254 50 A 36 36 0 0 1 290 86 L 290 140 L 50 210 Z" fill="#ffffff" fill-opacity="0.12"/>
+  <rect x="80" y="100" width="180" height="110" rx="16" fill="#090d16" fill-opacity="0.5" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25"/>
+  <path d="M 95 165 Q 115 125, 135 160 T 175 140 T 215 170 T 245 150" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 95 180 Q 120 150, 145 175 T 205 160 T 245 185" fill="none" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" stroke-opacity="0.7"/>
+  <circle cx="215" cy="170" r="6" fill="#ffffff"/>
+  <rect x="80" y="235" width="130" height="12" rx="6" fill="#ffffff" fill-opacity="0.95"/>
+  <rect x="80" y="257" width="90" height="10" rx="5" fill="#f472b6" fill-opacity="0.8"/>
+  <rect x="80" y="277" width="110" height="10" rx="5" fill="#38bdf8" fill-opacity="0.6"/>
+</g>
+<g transform="translate(10,10)" filter="url(#ud-glowE)">
+  <circle cx="65" cy="350" r="50" fill="url(#ud-emerald)" stroke="#ffffff" stroke-width="5"/>
+  <path d="M 40 350 L 58 368 L 92 330" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
+      <div class="brand-text">
+        <h1 class="wordmark"><svg class="wm" viewBox="40 -714 4022 727" role="img" aria-label="Undupe" focusable="false"><path class="wm-un" d="M267 -708V-309Q267 -260 288.5 -231.5Q310 -203 358 -203Q406 -203 429 -231.5Q452 -260 452 -309V-708H673V-309Q673 -208 631 -136.5Q589 -65 516 -29Q443 7 353 7Q263 7 193.5 -29Q124 -65 85 -136Q46 -207 46 -309V-708ZM1433 0H1211L976 -356V0H754V-708H976L1211 -346V-708H1433Z"/><path fill="url(#wm-grad)" d="M2181 -356Q2181 -255 2136 -174Q2091 -93 2007.5 -46.5Q1924 0 1813 0H1518V-708H1813Q1924 -708 2007.5 -663Q2091 -618 2136 -538Q2181 -458 2181 -356ZM1956 -356Q1956 -432 1912 -473Q1868 -514 1793 -514H1740V-198H1793Q1868 -198 1912 -239Q1956 -280 1956 -356ZM2463 -708V-309Q2463 -260 2484.5 -231.5Q2506 -203 2554 -203Q2602 -203 2625 -231.5Q2648 -260 2648 -309V-708H2869V-309Q2869 -208 2827 -136.5Q2785 -65 2712 -29Q2639 7 2549 7Q2459 7 2389.5 -29Q2320 -65 2281 -136Q2242 -207 2242 -309V-708ZM3260 -225H3172V0H2950V-708H3260Q3390 -708 3459.5 -642Q3529 -576 3529 -465Q3529 -398 3498 -343.5Q3467 -289 3406.5 -257Q3346 -225 3260 -225ZM3304 -465Q3304 -530 3235 -530H3172V-400H3235Q3304 -400 3304 -465ZM3806 -531V-444H4026V-277H3806V-177H4056V0H3584V-708H4056V-531Z"/></svg></h1>
+        <p>Find duplicates. Keep what matters. Organize the rest.</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="browserPill" class="pill ok" title="Undupe runs entirely in your browser. Your files and folder names never leave this device."><span class="dot"></span><span>Runs locally</span></span>
+      <button id="installBtn" class="btn btn-ghost btn-sm hidden">Install app</button>
+      <button id="themeToggleBtn" class="btn btn-ghost btn-sm" title="Switch color theme" aria-label="Switch color theme"><span id="themeIcon"></span></button>
+      <button id="browseFilesBtn" class="btn btn-ghost btn-sm hidden">Browse files</button>
+      <button id="startOverBtn" class="btn btn-ghost btn-sm hidden">Start over</button>
+    </div>
+  </header>
+
+  <div id="resumeBanner" class="resume-banner hidden">
+    <div class="rb-text">
+      <h3>Welcome back</h3>
+      <p id="resumeDetail">We found a previous session saved on this device.</p>
+    </div>
+    <div class="rb-actions">
+      <button id="resumeDiscardBtn" class="btn btn-ghost btn-sm">Start fresh</button>
+      <button id="resumeContinueBtn" class="btn btn-hero btn-sm">Restore access &amp; continue</button>
+    </div>
+  </div>
+
+  <div class="mobile-stepper" id="mobileStepper"></div>
+
+  <div class="workspace">
+    <div class="rail" id="rail"></div>
+
+    <div id="stepArea">
+
+      <!-- ================= STEP 1 ================= -->
+      <section class="step-view" id="view1">
+        <div class="panel">
+          <h2 class="serif">Where should we look?</h2>
+          <p class="sub">Add one or more folders to scan &mdash; your backup drives, exports, whatever's grown out of control. Nothing is touched until you approve the final migration.</p>
+
+          <div class="section-label">Source folders</div>
+          <div id="sourceList"></div>
+          <div id="sourceEmptyHint" class="empty-folder-hint">No source folders added yet</div>
+          <button id="addSourceBtn" class="btn btn-ghost btn-sm" style="margin-top:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Add source folder
+          </button>
+
+          <div style="height:26px;"></div>
+
+          <div class="section-label">Clean output folder</div>
+          <div id="targetRow"></div>
+          <div id="targetEmptyHint" class="empty-folder-hint">No output folder chosen yet</div>
+          <button id="pickTargetBtn" class="btn btn-ghost btn-sm" style="margin-top:6px;">Choose output folder</button>
+
+          <div style="height:30px;"></div>
+
+          <div class="grid-2">
+            <div>
+              <div class="section-label">When duplicates are found, keep&hellip;</div>
+              <div class="option-card">
+                <label class="radio-row"><input type="radio" name="dupRule" value="newest" checked>
+                  <div><div class="rr-title">The newest copy</div><div class="rr-desc">Keeps whichever file has the latest modified date</div></div>
+                </label>
+                <label class="radio-row"><input type="radio" name="dupRule" value="oldest">
+                  <div><div class="rr-title">The oldest copy</div><div class="rr-desc">Keeps whichever file has the earliest modified date</div></div>
+                </label>
+                <label class="radio-row"><input type="radio" name="dupRule" value="manual">
+                  <div><div class="rr-title">Let me choose</div><div class="rr-desc">You'll pick a winner for every duplicate group</div></div>
+                </label>
+              </div>
+            </div>
+            <div>
+              <div class="section-label">Copy or move source files?</div>
+              <div class="option-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <div>
+                    <div class="rr-title" id="modeLabel">Copy</div>
+                    <div class="rr-desc" id="modeDesc">Originals stay exactly where they are</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="modeToggle">
+                    <span class="track"></span>
+                  </label>
+                </div>
+                <div id="moveWarning" class="warn-note hidden">
+                  <span>&#9888;</span>
+                  <span>Move deletes each source file right after it's safely copied. Only the file chosen to "keep" from a duplicate group is ever kept &mdash; the rest are left in place, unless you also delete them yourself.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="overlapWarning" class="warn-note hidden" style="margin-top:20px;"></div>
+
+          <div class="footer-row">
+            <button id="beginScanBtn" class="btn btn-primary" disabled>Begin scan</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= STEP 2: SCANNING ================= -->
+      <section class="step-view hidden" id="view2">
+        <div class="panel">
+          <h2 class="serif">Scanning your archive</h2>
+          <p class="sub">This runs in the background &mdash; feel free to leave the tab open and come back.</p>
+
+          <div class="phase-label"><span class="spinner" id="phaseSpinner"></span><span id="phaseText">Cataloging files&hellip;</span></div>
+          <div class="progress-track"><div class="progress-fill indeterminate" id="scanProgressFill"></div></div>
+          <div class="progress-meta"><span id="scanProgressText">Starting&hellip;</span><span id="scanProgressPct"></span></div>
+          <div class="current-path" id="scanCurrentPath">&nbsp;</div>
+
+          <div class="stat-grid">
+            <div class="stat-box"><div class="stat-label">Files found</div><div class="stat-value" id="statFilesFound">0</div></div>
+            <div class="stat-box accent"><div class="stat-label">Data scanned</div><div class="stat-value" id="statDataScanned">0 GB</div></div>
+            <div class="stat-box accent2"><div class="stat-label">Possible duplicates</div><div class="stat-value" id="statPossibleDupes">0</div></div>
+          </div>
+
+          <div class="footer-row split">
+            <button id="cancelScanBtn" class="btn btn-danger btn-sm">Cancel scan</button>
+            <span style="font-size:0.78rem;color:var(--text-low);align-self:center;">Progress is saved automatically after cataloging</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= STEP 3: DUPLICATES ================= -->
+      <section class="step-view hidden" id="view3">
+        <div class="panel">
+          <h2 class="serif">Review duplicates</h2>
+          <p class="sub">We only compare exact byte-for-byte matches &mdash; never guesses based on filename alone.</p>
+
+          <div class="dup-summary-bar">
+            <div class="stat-grid" style="margin:0;flex-grow:1;" id="dupStatGrid"></div>
+          </div>
+
+          <div id="dupNoneState" class="hidden" style="text-align:center;padding:30px 0;color:var(--text-mid);">
+            Every file turned out to be unique &mdash; nothing to resolve here.
+          </div>
+
+          <div id="cloneSection" class="hidden" style="margin-bottom:22px;">
+            <div class="section-label">Folder clones <span style="color:var(--text-low);font-weight:400;">&mdash; whole folders that already exist somewhere else</span></div>
+            <div id="cloneCards"></div>
+          </div>
+
+          <div id="dupGroupList"></div>
+          <div class="show-more-wrap"><button id="showMoreDupsBtn" class="btn btn-ghost btn-sm hidden">Show more groups</button></div>
+
+          <div class="footer-row">
+            <button id="toStep4Btn" class="btn btn-primary">Continue to organize</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= STEP 4: ORGANIZE & MIGRATE ================= -->
+      <section class="step-view hidden" id="view4">
+        <div class="panel" id="migratePreviewPanel">
+          <h2 class="serif">Organize into your clean folder</h2>
+          <p class="sub">Files are sorted into folders by type. Nothing is written until you press start.</p>
+
+          <div class="category-grid" id="categoryGrid"></div>
+
+          <div class="section-label" style="margin-top:4px;">Writing to</div>
+          <div id="migrateTargetRow" class="folder-row" style="margin-bottom:20px;"></div>
+
+          <div class="footer-row split">
+            <span style="font-size:0.82rem;color:var(--text-mid);align-self:center;" id="migrateModeSummary"></span>
+            <button id="startMigrateBtn" class="btn btn-hero">Start migration</button>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="migrateProgressPanel">
+          <h2 class="serif">Writing your clean archive</h2>
+          <div class="progress-track"><div class="progress-fill" id="migrateProgressFill"></div></div>
+          <div class="progress-meta"><span id="migrateProgressText">0 of 0 files</span><span id="migrateProgressPct">0%</span></div>
+          <div class="current-path" id="migrateCurrentPath">&nbsp;</div>
+          <div class="footer-row split">
+            <button id="cancelMigrateBtn" class="btn btn-danger btn-sm">Cancel</button>
+            <span></span>
+          </div>
+          <div id="migrateErrorLog" class="error-log hidden"></div>
+        </div>
+      </section>
+
+      <!-- ================= STEP 5: DONE ================= -->
+      <section class="step-view hidden" id="view5">
+        <div class="panel">
+          <div class="done-hero">
+            <div class="done-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <h2 class="serif">Your archive is clean</h2>
+            <p id="doneSummaryLine">&nbsp;</p>
+          </div>
+
+          <div class="stat-grid" style="margin-top:24px;">
+            <div class="stat-box accent"><div class="stat-label">Files organized</div><div class="stat-value" id="doneFilesOrganized">0</div></div>
+            <div class="stat-box accent2"><div class="stat-label">Duplicates skipped</div><div class="stat-value" id="doneDupesSkipped">0</div></div>
+            <div class="stat-box"><div class="stat-label">Space reclaimed</div><div class="stat-value" id="doneSpaceReclaimed">0 GB</div></div>
+          </div>
+
+          <div id="doneErrorNote" class="warn-note hidden" style="margin-top:20px;"></div>
+          <div id="doneInfoNote" class="bundle-note hidden" style="margin-top:14px;"></div>
+
+          <div class="footer-row split">
+            <button id="downloadLogBtn" class="btn btn-ghost btn-sm">Download session log</button>
+            <button id="newScanBtn" class="btn btn-primary">Start a new scan</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="serif" style="font-size:1.15rem;">A closer look</h2>
+          <div class="section-label" style="margin-top:6px;">By type</div>
+          <div id="insightsByCategory" class="insight-bars"></div>
+          <div class="section-label" style="margin-top:20px;">By year</div>
+          <p class="insight-caption">Based on each file's modified date</p>
+          <div id="insightsByYear" class="insight-bars"></div>
+          <div class="section-label" style="margin-top:20px;">Biggest duplicate groups</div>
+          <div id="insightsTopDupes" class="insight-bars"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div id="browseOverlay" class="browse-overlay hidden">
+  <div class="browse-panel">
+    <div class="browse-header">
+      <h2 class="serif">Browse your files</h2>
+      <div style="display:flex;gap:8px;">
+        <button id="indexDatesBtn" class="btn btn-ghost btn-sm" title="Reads the date each JPEG photo was actually taken">Read photo dates</button>
+      <button id="closeBrowseBtn" class="btn btn-ghost btn-sm">Close</button>
+      </div>
+    </div>
+    <div class="browse-controls">
+      <input type="text" id="browseSearchInput" class="bare" placeholder="Search by name or path\u2026">
+      <select id="browseCategoryFilter" class="bare">
+        <option value="">All types</option>
+        <option value="Photos">Photos</option>
+        <option value="Videos">Videos</option>
+        <option value="Documents">Documents</option>
+        <option value="Audio">Audio</option>
+        <option value="Bundles &amp; Projects">Bundles &amp; Projects</option>
+        <option value="Other">Other</option>
+      </select>
+      <select id="browseSortSelect" class="bare">
+        <option value="name-asc">Name (A\u2013Z)</option>
+        <option value="name-desc">Name (Z\u2013A)</option>
+        <option value="size-desc">Size (largest)</option>
+        <option value="size-asc">Size (smallest)</option>
+        <option value="date-desc">Date (newest)</option>
+        <option value="date-asc">Date (oldest)</option>
+        <option value="taken-desc">Date taken (newest)</option>
+        <option value="taken-asc">Date taken (oldest)</option>
+      </select>
+    </div>
+    <div class="browse-meta" id="browseMeta"></div>
+    <div class="browse-table-wrap"><div id="browseTableBody"></div></div>
+    <div class="browse-pagination">
+      <button id="browsePrevBtn" class="btn btn-ghost btn-sm">Previous</button>
+      <span id="browsePageLabel"></span>
+      <button id="browseNextBtn" class="btn btn-ghost btn-sm">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="updateToast" class="toast hidden" role="status">
+  <span>A new version of Undupe is ready.</span>
+  <button id="updateNowBtn" class="btn btn-primary btn-sm">Reload to update</button>
+  <button id="updateLaterBtn" class="btn btn-ghost btn-sm">Later</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+const STEPS = ["Setup","Scan","Duplicates","Organize","Done"];
+const CATEGORY_EXT = {
+  Photos: ["jpg","jpeg","png","gif","heic","heif","bmp","tiff","tif","webp","raw","cr2","cr3","nef","arw","dng","orf","rw2","svg","ico"],
+  Videos: ["mp4","mov","avi","mkv","wmv","m4v","mpg","mpeg","flv","webm","3gp","3g2"],
+  Audio: ["mp3","wav","flac","m4a","aac","ogg","wma","aiff","opus"],
+  Documents: ["pdf","doc","docx","txt","rtf","odt","xls","xlsx","csv","ppt","pptx","pages","numbers","key","md"]
+};
+const SKIP_NAMES = new Set(["System Volume Information","$RECYCLE.BIN","node_modules",".git",".Trash","Thumbs.db",".DS_Store"]);
+const BUNDLE_DIR_EXT = new Set([
+  "app","bundle","framework","plugin","kext","xcodeproj","xcworkspace",
+  "photoslibrary","aplibrary","imovielibrary","imovieproject","tvlibrary","theater",
+  "band","logicx","rcproject","fcpbundle","sparsebundle","qlgenerator",
+  "prefpane","saver","mpkg","pkg","workflow","component","docset","appex"
+]);
+function isBundleDir(name){
+  const dot = name.lastIndexOf(".");
+  if(dot <= 0) return false;
+  return BUNDLE_DIR_EXT.has(name.slice(dot+1).toLowerCase());
+}
+const CATALOG_CHECKPOINT_EVERY = 2500;
+const HASH_WORKER_SRC = `
+self.onmessage = async (e) => {
+  const { id, file, mode } = e.data;
+  try {
+    let buffer;
+    if (mode === 'partial') {
+      const headSize = 262144;
+      const head = await file.slice(0, headSize).arrayBuffer();
+      if (file.size > headSize * 2) {
+        const tail = await file.slice(file.size - headSize, file.size).arrayBuffer();
+        const merged = new Uint8Array(head.byteLength + tail.byteLength);
+        merged.set(new Uint8Array(head), 0);
+        merged.set(new Uint8Array(tail), head.byteLength);
+        buffer = merged.buffer;
+      } else {
+        buffer = head;
+      }
+    } else {
+      const CHUNK = 16777216;
+      if (file.size <= CHUNK) {
+        buffer = await file.arrayBuffer();
+      } else {
+        const parts = [];
+        for (let off = 0; off < file.size; off += CHUNK) {
+          const chunk = await file.slice(off, off + CHUNK).arrayBuffer();
+          parts.push(new Uint8Array(await crypto.subtle.digest('SHA-256', chunk)));
+        }
+        const merged = new Uint8Array(parts.length * 32);
+        parts.forEach((p, i) => merged.set(p, i * 32));
+        buffer = merged.buffer;
+      }
+    }
+    const digest = await crypto.subtle.digest('SHA-256', buffer);
+    const hex = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2,'0')).join('');
+    self.postMessage({ id, hash: hex });
+  } catch (err) {
+    self.postMessage({ id, error: String(err && err.message ? err.message : err) });
+  }
+};
+`;
+
+/* ============================================================
+   INDEXEDDB HELPER (single 'meta' key/value store)
+   ============================================================ */
+const DB_NAME = "archiveSanitizerDB";
+const STORE = "meta";
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+let dbPromise = null;
+function getDB(){ if(!dbPromise) dbPromise = openDB(); return dbPromise; }
+async function idbSet(key, value){
+  const db = await getDB();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,"readwrite");
+    tx.objectStore(STORE).put(value, key);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGet(key){
+  const db = await getDB();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,"readonly");
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbDelete(key){
+  const db = await getDB();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,"readwrite");
+    tx.objectStore(STORE).delete(key);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbClearAll(){
+  const db = await getDB();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,"readwrite");
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* ============================================================
+   WORKER POOL FOR HASHING
+   ============================================================ */
+class HashPool{
+  constructor(size){
+    const blob = new Blob([HASH_WORKER_SRC], {type:"application/javascript"});
+    const url = URL.createObjectURL(blob);
+    this.workers = [];
+    this.nextId = 1;
+    this.pending = new Map();
+    this.rr = 0;
+    for(let i=0;i<size;i++){
+      const w = new Worker(url);
+      w.onmessage = (e) => {
+        const {id, hash, error} = e.data;
+        const p = this.pending.get(id);
+        if(!p) return;
+        this.pending.delete(id);
+        if(error) p.reject(new Error(error)); else p.resolve(hash);
+      };
+      this.workers.push(w);
+    }
+  }
+  hash(file, mode){
+    const id = this.nextId++;
+    const w = this.workers[this.rr % this.workers.length];
+    this.rr++;
+    return new Promise((resolve,reject)=>{
+      this.pending.set(id, {resolve,reject});
+      w.postMessage({id, file, mode});
+    });
+  }
+  terminate(){ this.workers.forEach(w=>w.terminate()); }
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  sources: [],          // [{name, handle}]
+  target: null,         // {name, handle}
+  dupRule: "newest",
+  mode: "copy",          // 'copy' | 'move'
+  catalog: [],           // flat list of file records
+  duplicateGroups: [],   // [{fullHash, files:[...], chosenIndex}]
+  cancelRequested: false,
+  scanStartedAt: null,
+  errors: [],
+  sessionLog: [],
+  thumbUrls: [],
+  clones: [],
+  exifCache: new Map(),
+  skippedAlreadyPresent: 0
+};
+
+function log(msg){
+  state.sessionLog.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function getExt(name){
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(dot+1).toLowerCase() : "";
+}
+function categorize(ext){
+  for(const [cat, list] of Object.entries(CATEGORY_EXT)){
+    if(list.indexOf(ext) !== -1) return cat;
+  }
+  return "Other";
+}
+function fmtBytes(bytes){
+  if(!bytes || bytes <= 0) return "0 MB";
+  const units = ["B","KB","MB","GB","TB"];
+  let i = 0; let v = bytes;
+  while(v >= 1024 && i < units.length-1){ v/=1024; i++; }
+  return `${v.toFixed(v>=10||i===0?0:1)} ${units[i]}`;
+}
+function fmtNum(n){ return n.toLocaleString(); }
+function pathJoin(segs, name){ return [...segs, name].join("/"); }
+function yieldToUI(){ return new Promise(r=>setTimeout(r,0)); }
+
+/* ============================================================
+   FILE SYSTEM ACCESS HELPERS
+   ============================================================ */
+async function verifyPermission(handle, mode){
+  const opts = {mode: mode || "read"};
+  try{
+    if((await handle.queryPermission(opts)) === "granted") return true;
+    if((await handle.requestPermission(opts)) === "granted") return true;
+  }catch(e){ /* handle may be stale */ }
+  return false;
+}
+async function* walkDirectory(dirHandle, sourceIndex, pathSegs){
+  pathSegs = pathSegs || [];
+  for await (const [name, handle] of dirHandle.entries()){
+    if(name.startsWith(".") || SKIP_NAMES.has(name)) continue;
+    if(handle.kind === "directory"){
+      if(isBundleDir(name)){
+        yield {bundle:true, handle, sourceIndex, pathSegs, name};
+      } else {
+        yield* walkDirectory(handle, sourceIndex, [...pathSegs, name]);
+      }
+    } else {
+      yield {handle, sourceIndex, pathSegs, name};
+    }
+  }
+}
+async function measureDirectory(dirHandle){
+  let size = 0, count = 0, lastModified = 0;
+  for await (const [name, handle] of dirHandle.entries()){
+    if(handle.kind === "directory"){
+      const sub = await measureDirectory(handle);
+      size += sub.size; count += sub.count; lastModified = Math.max(lastModified, sub.lastModified);
+    } else {
+      try{
+        const f = await handle.getFile();
+        size += f.size; count++; lastModified = Math.max(lastModified, f.lastModified);
+      }catch(e){ /* skip unreadable entries */ }
+    }
+  }
+  return {size, count, lastModified};
+}
+async function resolveDirHandle(sourceIndex, pathSegs){
+  let dir = state.sources[sourceIndex].handle;
+  for(const seg of pathSegs) dir = await dir.getDirectoryHandle(seg);
+  return dir;
+}
+async function resolveFileHandle(item){
+  const dir = await resolveDirHandle(item.sourceIndex, item.pathSegs);
+  return dir.getFileHandle(item.name);
+}
+async function getOrCreateDir(rootHandle, name){
+  return rootHandle.getDirectoryHandle(name, {create:true});
+}
+async function entryExists(dirHandle, name){
+  try{ await dirHandle.getFileHandle(name); return true; }catch(e){ return false; }
+}
+async function dirExists(dirHandle, name){
+  try{ await dirHandle.getDirectoryHandle(name); return true; }catch(e){ return false; }
+}
+async function anyEntryExists(dirHandle, name){
+  return (await entryExists(dirHandle, name)) || (await dirExists(dirHandle, name));
+}
+function suffixName(name, n){
+  const dot = name.lastIndexOf(".");
+  const base = dot > 0 ? name.slice(0,dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : "";
+  return `${base} (${n})${ext}`;
+}
+async function sha256OfFile(file){
+  const CHUNK = 16777216;
+  let buf;
+  if(file.size <= CHUNK){
+    buf = await file.arrayBuffer();
+  } else {
+    const parts = [];
+    for(let off = 0; off < file.size; off += CHUNK){
+      const chunk = await file.slice(off, off + CHUNK).arrayBuffer();
+      parts.push(new Uint8Array(await crypto.subtle.digest("SHA-256", chunk)));
+    }
+    const merged = new Uint8Array(parts.length * 32);
+    parts.forEach((p, i) => merged.set(p, i * 32));
+    buf = merged.buffer;
+  }
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function existingFileMatchesSize(dirHandle, name, size){
+  try{
+    const h = await dirHandle.getFileHandle(name);
+    const f = await h.getFile();
+    return f.size === size;
+  }catch(e){ return false; }
+}
+// Walks name, "name (1)", "name (2)"... A candidate that already holds the identical file means
+// "already migrated" (so re-runs never pile up copies); the first free name is used otherwise.
+async function resolveDestinationForFile(dirHandle, name, srcFile){
+  let candidate = name, n = 0, srcHash = null;
+  for(;;){
+    if(!(await anyEntryExists(dirHandle, candidate))) return {name:candidate, alreadyPresent:false};
+    const existing = await dirHandle.getFileHandle(candidate).catch(()=>null);
+    if(existing){
+      const ef = await existing.getFile();
+      if(ef.size === srcFile.size){
+        if(srcHash === null) srcHash = await sha256OfFile(srcFile);
+        if(srcHash === await sha256OfFile(ef)) return {name:candidate, alreadyPresent:true};
+      }
+    }
+    candidate = suffixName(name, ++n);
+  }
+}
+// Compare a source bundle with a folder already at the destination.
+// conflict = it holds something different (never touch it); missing = files still to copy (interrupted run).
+async function compareTrees(src, dest){
+  let missing = 0;
+  const srcNames = new Set();
+  for await (const [n,h] of src.entries()){
+    srcNames.add(n);
+    if(h.kind === "directory"){
+      let dh;
+      try{ dh = await dest.getDirectoryHandle(n); }catch(e){ missing++; continue; }
+      const sub = await compareTrees(h, dh);
+      if(sub.conflict) return {conflict:true, missing};
+      missing += sub.missing;
+    } else {
+      let dh;
+      try{ dh = await dest.getFileHandle(n); }catch(e){ missing++; continue; }
+      const sf = await h.getFile(), df = await dh.getFile();
+      if(sf.size !== df.size) return {conflict:true, missing};
+    }
+  }
+  for await (const [n] of dest.entries()){
+    if(!srcNames.has(n)) return {conflict:true, missing};
+  }
+  return {conflict:false, missing};
+}
+async function resolveBundleDestination(catDirHandle, srcBundleHandle, name){
+  let candidate = name, n = 0;
+  for(;;){
+    if(!(await anyEntryExists(catDirHandle, candidate))) return {name:candidate, state:"new"};
+    if(await dirExists(catDirHandle, candidate)){
+      const dh = await catDirHandle.getDirectoryHandle(candidate);
+      const cmp = await compareTrees(srcBundleHandle, dh);
+      if(!cmp.conflict) return {name:candidate, state: cmp.missing === 0 ? "complete" : "partial"};
+    }
+    candidate = suffixName(name, ++n);
+  }
+}
+async function copyDirectoryRecursive(srcDirHandle, destParentHandle, name){
+  const destDirHandle = await destParentHandle.getDirectoryHandle(name, {create:true});
+  let failed = 0;
+  for await (const [entryName, entryHandle] of srcDirHandle.entries()){
+    if(state.cancelRequested) return {destDirHandle, completed:false, failed};
+    if(entryHandle.kind === "directory"){
+      const sub = await copyDirectoryRecursive(entryHandle, destDirHandle, entryName);
+      failed += sub.failed;
+      if(!sub.completed) return {destDirHandle, completed:false, failed};
+    } else {
+      try{
+        const file = await entryHandle.getFile();
+        const already = await existingFileMatchesSize(destDirHandle, entryName, file.size);
+        if(!already){
+          const fh = await destDirHandle.getFileHandle(entryName, {create:true});
+          const w = await fh.createWritable();
+          await w.write(file);
+          await w.close();
+          if(!(await existingFileMatchesSize(destDirHandle, entryName, file.size))) failed++;
+        }
+      }catch(e){ failed++; }
+    }
+  }
+  return {destDirHandle, completed:true, failed};
+}
+
+/* ============================================================
+   DOM SHORTCUTS
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+let currentStep = 1;
+
+/* ============================================================
+   THEME
+   ============================================================ */
+const THEME_KEY = "archiveSanitizerTheme";
+function sunSvg(){ return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`; }
+function moonSvg(){ return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`; }
+function applyTheme(theme){
+  document.documentElement.setAttribute("data-theme", theme);
+  const tc = document.getElementById("themeColorMeta");
+  if(tc) tc.setAttribute("content", theme === "light" ? "#f3f1fb" : "#070b14");
+  $("themeIcon").innerHTML = theme === "light" ? moonSvg() : sunSvg();
+  try{ localStorage.setItem(THEME_KEY, theme); }catch(e){ /* storage may be unavailable */ }
+}
+function initTheme(){
+  let theme = null;
+  try{ theme = localStorage.getItem(THEME_KEY); }catch(e){ /* ignore */ }
+  if(!theme) theme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+  applyTheme(theme);
+}
+initTheme();
+$("themeToggleBtn").addEventListener("click", ()=>{
+  const cur = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  applyTheme(cur === "light" ? "dark" : "light");
+});
+
+/* ============================================================
+   RAIL / STEPPER
+   ============================================================ */
+function renderRail(){
+  const rail = $("rail");
+  const mobile = $("mobileStepper");
+  rail.innerHTML = "";
+  mobile.innerHTML = "";
+  STEPS.forEach((label, i)=>{
+    const n = i+1;
+    const state_ = n < currentStep ? "done" : (n === currentStep ? "active" : "");
+    const el = document.createElement("div");
+    el.className = "rail-step " + state_;
+    el.textContent = n;
+    el.title = label;
+    rail.appendChild(el);
+    if(n < STEPS.length){
+      const line = document.createElement("div");
+      line.className = "rail-line";
+      rail.appendChild(line);
+    }
+    const chip = document.createElement("div");
+    chip.className = "chip " + state_;
+    chip.textContent = `${n}. ${label}`;
+    mobile.appendChild(chip);
+  });
+}
+function goToStep(n){
+  currentStep = n;
+  if(n !== 1) $("resumeBanner").classList.add("hidden");
+  for(let i=1;i<=5;i++){
+    $("view"+i).classList.toggle("hidden", i !== n);
+  }
+  renderRail();
+  $("startOverBtn").classList.toggle("hidden", n === 1);
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+/* ============================================================
+   STEP 1: SETUP UI
+   ============================================================ */
+function renderSources(){
+  const list = $("sourceList");
+  list.innerHTML = "";
+  $("sourceEmptyHint").classList.toggle("hidden", state.sources.length > 0);
+  state.sources.forEach((src, idx)=>{
+    const row = document.createElement("div");
+    row.className = "folder-row";
+    row.innerHTML = `
+      <span class="folder-icon">${folderSvg()}</span>
+      <span class="folder-name">${escapeHtml(src.name)}</span>
+      <button class="remove-btn" data-idx="${idx}" title="Remove">${xSvg()}</button>
+    `;
+    row.querySelector(".remove-btn").addEventListener("click", ()=>{
+      state.sources.splice(idx,1);
+      renderSources();
+      updateBeginScanEnabled();
+      persistHandles();
+    });
+    list.appendChild(row);
+  });
+}
+function renderTarget(){
+  const row = $("targetRow");
+  $("targetEmptyHint").classList.toggle("hidden", !!state.target);
+  row.className = state.target ? "folder-row" : "";
+  if(!state.target){ row.innerHTML = ""; return; }
+  row.innerHTML = `
+    <span class="folder-icon">${targetSvg()}</span>
+    <span class="folder-name">${escapeHtml(state.target.name)}</span>
+    <button class="remove-btn" id="removeTargetBtn" title="Remove">${xSvg()}</button>
+  `;
+  $("removeTargetBtn").addEventListener("click", ()=>{
+    state.target = null;
+    renderTarget();
+    updateBeginScanEnabled();
+    persistHandles();
+  });
+}
+function folderSvg(){ return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.6"/></svg>`; }
+function targetSvg(){ return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--accent-bright)"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>`; }
+function xSvg(){ return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`; }
+function escapeHtml(s){ const d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+
+function updateBeginScanEnabled(){
+  $("beginScanBtn").disabled = !(state.sources.length > 0 && state.target);
+}
+
+$("addSourceBtn").addEventListener("click", async ()=>{
+  $("resumeBanner").classList.add("hidden");
+  try{
+    const handle = await window.showDirectoryPicker({mode:"read"});
+    if(state.sources.some(s=>s.name===handle.name)){
+      // allow duplicates by name but warn lightly via title; still add since could be different drives
+    }
+    state.sources.push({name: handle.name, handle});
+    renderSources();
+    updateBeginScanEnabled();
+    persistHandles();
+  }catch(e){ /* user cancelled */ }
+});
+
+$("pickTargetBtn").addEventListener("click", async ()=>{
+  $("resumeBanner").classList.add("hidden");
+  try{
+    const handle = await window.showDirectoryPicker({mode:"readwrite"});
+    state.target = {name: handle.name, handle};
+    renderTarget();
+    updateBeginScanEnabled();
+    persistHandles();
+  }catch(e){ /* user cancelled */ }
+});
+
+document.querySelectorAll('input[name="dupRule"]').forEach(radio=>{
+  radio.addEventListener("change", (e)=>{
+    state.dupRule = e.target.value;
+    idbSet("settings", {dupRule: state.dupRule, mode: state.mode});
+  });
+});
+
+$("modeToggle").addEventListener("change", (e)=>{
+  state.mode = e.target.checked ? "move" : "copy";
+  $("modeLabel").textContent = state.mode === "move" ? "Move" : "Copy";
+  $("modeDesc").textContent = state.mode === "move" ? "Kept files are removed from the source after copying" : "Originals stay exactly where they are";
+  $("moveWarning").classList.toggle("hidden", state.mode !== "move");
+  idbSet("settings", {dupRule: state.dupRule, mode: state.mode});
+});
+
+async function checkOverlap(){
+  if(!state.target) return null;
+  for(const s of state.sources){
+    try{
+      if(await s.handle.isSameEntry(state.target.handle)){
+        return `Your output folder is the same folder as source "${s.name}". Choose a different output folder.`;
+      }
+      if(await s.handle.resolve(state.target.handle)){
+        return `Your output folder is inside source "${s.name}". Choose an output folder outside of your source folders.`;
+      }
+      if(await state.target.handle.resolve(s.handle)){
+        return `Source folder "${s.name}" is inside your output folder. Choose source folders outside of the output folder.`;
+      }
+    }catch(e){ /* unrelated handles can throw in some implementations; treat as no overlap */ }
+  }
+  return null;
+}
+
+$("beginScanBtn").addEventListener("click", async ()=>{
+  $("beginScanBtn").disabled = true;
+  const problem = await checkOverlap();
+  if(problem){
+    $("overlapWarning").classList.remove("hidden");
+    $("overlapWarning").innerHTML = `<span>&#9888;</span><span>${escapeHtml(problem)}</span>`;
+    $("beginScanBtn").disabled = false;
+    return;
+  }
+  $("overlapWarning").classList.add("hidden");
+  goToStep(2);
+  runScan();
+});
+
+$("startOverBtn").addEventListener("click", async ()=>{
+  if(!confirm("Start a new scan? This clears the current session (your source and output folders will need to be re-selected).")) return;
+  await idbClearAll();
+  location.reload();
+});
+$("newScanBtn").addEventListener("click", async ()=>{
+  await idbClearAll();
+  location.reload();
+});
+
+/* ============================================================
+   PHASE 1: CATALOG
+   ============================================================ */
+async function runScan(){
+  state.cancelRequested = false;
+  state.errors = [];
+  state.catalog = [];
+  state.scanStartedAt = Date.now();
+  log("Scan started");
+  setPhase("Cataloging files\u2026", true);
+
+  let count = 0, bytes = 0;
+  outer:
+  for(let si=0; si<state.sources.length; si++){
+    const root = state.sources[si].handle;
+    for await (const entry of walkDirectory(root, si)){
+      if(state.cancelRequested) break outer;
+      if(entry.bundle){
+        let info;
+        try{ info = await measureDirectory(entry.handle); }
+        catch(e){ state.errors.push(`Could not read bundle ${pathJoin(entry.pathSegs, entry.name)}`); continue; }
+        state.catalog.push({
+          id: state.catalog.length,
+          sourceIndex: entry.sourceIndex,
+          pathSegs: entry.pathSegs,
+          name: entry.name,
+          ext: getExt(entry.name),
+          size: info.size,
+          lastModified: info.lastModified || Date.now(),
+          category: "Bundles & Projects",
+          isBundle: true,
+          innerFileCount: info.count
+        });
+        count++; bytes += info.size;
+        if(count % 15 === 0){
+          $("statFilesFound").textContent = fmtNum(count);
+          $("statDataScanned").textContent = fmtBytes(bytes);
+          $("scanCurrentPath").textContent = pathJoin(entry.pathSegs, entry.name);
+          $("scanProgressText").textContent = `${fmtNum(count)} items cataloged`;
+        }
+        continue;
+      }
+      let file;
+      try{ file = await entry.handle.getFile(); }
+      catch(e){ state.errors.push(`Could not read ${pathJoin(entry.pathSegs, entry.name)}`); continue; }
+      const ext = getExt(entry.name);
+      state.catalog.push({
+        id: state.catalog.length,
+        sourceIndex: entry.sourceIndex,
+        pathSegs: entry.pathSegs,
+        name: entry.name,
+        ext,
+        size: file.size,
+        lastModified: file.lastModified,
+        category: categorize(ext)
+      });
+      count++; bytes += file.size;
+      if(count % 15 === 0){
+        $("statFilesFound").textContent = fmtNum(count);
+        $("statDataScanned").textContent = fmtBytes(bytes);
+        $("scanCurrentPath").textContent = pathJoin(entry.pathSegs, entry.name);
+        $("scanProgressText").textContent = `${fmtNum(count)} files cataloged`;
+      }
+      if(count % 300 === 0) await yieldToUI();
+      if(count % CATALOG_CHECKPOINT_EVERY === 0) await checkpointCatalog();
+    }
+  }
+
+  if(state.cancelRequested){
+    log("Scan cancelled during cataloging");
+    goToStep(1);
+    return;
+  }
+
+  $("statFilesFound").textContent = fmtNum(state.catalog.length);
+  $("statDataScanned").textContent = fmtBytes(bytes);
+  await checkpointCatalog();
+  updateBrowseButtonVisibility();
+  log(`Cataloged ${state.catalog.length} files (${fmtBytes(bytes)})`);
+
+  await runHashPhases();
+}
+
+async function checkpointCatalog(){
+  await idbSet("catalog", state.catalog);
+  await idbSet("stage", "catalog-done");
+}
+
+/* ============================================================
+   PHASE 2-4: SIZE GROUPING + TIERED HASHING
+   ============================================================ */
+async function runHashPhases(){
+  setPhase("Comparing file sizes\u2026", true);
+  await yieldToUI();
+
+  const bySize = new Map();
+  for(const item of state.catalog){
+    if(item.isBundle) continue;
+    const arr = bySize.get(item.size) || [];
+    arr.push(item);
+    bySize.set(item.size, arr);
+  }
+  let sizeCandidates = [];
+  for(const [, group] of bySize){ if(group.length > 1) sizeCandidates.push(...group); }
+
+  $("statPossibleDupes").textContent = fmtNum(sizeCandidates.length);
+
+  if(sizeCandidates.length === 0){
+    finalizeDuplicateGroups([]);
+    return;
+  }
+
+  const poolSize = Math.max(1, Math.min(4, navigator.hardwareConcurrency || 2));
+  const pool = new HashPool(poolSize);
+
+  try{
+    setPhase("Fingerprinting candidates\u2026", false);
+    await hashRound(sizeCandidates, "partial", pool);
+    if(state.cancelRequested){ pool.terminate(); goToStep(1); return; }
+
+    const byPartial = new Map();
+    for(const item of sizeCandidates){
+      const key = item.size + "_" + item.partialHash;
+      const arr = byPartial.get(key) || [];
+      arr.push(item);
+      byPartial.set(key, arr);
+    }
+    let fullCandidates = [];
+    for(const [, group] of byPartial){ if(group.length > 1) fullCandidates.push(...group); }
+
+    setPhase("Confirming exact matches\u2026", false);
+    await hashRound(fullCandidates, "full", pool);
+    if(state.cancelRequested){ pool.terminate(); goToStep(1); return; }
+
+    const byFull = new Map();
+    for(const item of fullCandidates){
+      const arr = byFull.get(item.fullHash) || [];
+      arr.push(item);
+      byFull.set(item.fullHash, arr);
+    }
+    const groups = [];
+    for(const [hash, group] of byFull){ if(group.length > 1) groups.push({fullHash:hash, files:group}); }
+
+    pool.terminate();
+    finalizeDuplicateGroups(groups);
+  }catch(e){
+    pool.terminate();
+    state.errors.push("Hashing error: " + e.message);
+    finalizeDuplicateGroups([]);
+  }
+}
+
+async function hashRound(items, mode, pool){
+  let done = 0;
+  const total = items.length;
+  const CONCURRENCY = pool.workers.length * 3;
+  let idx = 0;
+  async function worker(){
+    while(idx < items.length){
+      if(state.cancelRequested) return;
+      const item = items[idx++];
+      try{
+        const handle = await resolveFileHandle(item);
+        const file = await handle.getFile();
+        const hash = await pool.hash(file, mode);
+        if(mode === "partial") item.partialHash = hash; else item.fullHash = hash;
+      }catch(e){
+        state.errors.push(`Could not hash ${pathJoin(item.pathSegs, item.name)}`);
+        if(mode === "partial") item.partialHash = "error_"+item.id; else item.fullHash = "error_"+item.id;
+      }
+      done++;
+      if(done % 10 === 0){
+        $("scanProgressText").textContent = `${fmtNum(done)} of ${fmtNum(total)} files`;
+        $("scanProgressPct").textContent = total ? Math.round(done/total*100)+"%" : "";
+        $("scanCurrentPath").textContent = pathJoin(item.pathSegs, item.name);
+      }
+      if(done % 200 === 0) await yieldToUI();
+    }
+  }
+  const runners = [];
+  for(let i=0;i<CONCURRENCY;i++) runners.push(worker());
+  await Promise.all(runners);
+}
+
+function finalizeDuplicateGroups(groups){
+  groups.forEach(g=>{
+    g.chosenIndex = computeDefaultChoice(g.files);
+  });
+  state.duplicateGroups = groups;
+  try{ state.clones = detectFolderClones(); }catch(e){ state.clones = []; }
+  idbSet("duplicateGroups", groups.map(g=>({fullHash:g.fullHash, fileIds:g.files.map(f=>f.id), chosenIndex:g.chosenIndex})));
+  idbSet("stage", "hash-done");
+  log(`Found ${groups.length} duplicate group(s)`);
+  renderDuplicateGroups();
+  goToStep(3);
+}
+function computeDefaultChoice(files){
+  if(state.dupRule === "oldest"){
+    let best=0; for(let i=1;i<files.length;i++) if(files[i].lastModified < files[best].lastModified) best=i;
+    return best;
+  }
+  // default: newest
+  let best=0; for(let i=1;i<files.length;i++) if(files[i].lastModified > files[best].lastModified) best=i;
+  return best;
+}
+
+function setPhase(text, indeterminate){
+  $("phaseText").textContent = text;
+  $("scanProgressFill").classList.toggle("indeterminate", !!indeterminate);
+  if(indeterminate){ $("scanProgressPct").textContent = ""; }
+}
+
+$("cancelScanBtn").addEventListener("click", ()=>{
+  state.cancelRequested = true;
+});
+
+/* ============================================================
+   STEP 3: DUPLICATE REVIEW
+   ============================================================ */
+let dupGroupsRendered = 0;
+const DUP_PAGE_SIZE = 25;
+
+function renderDuplicateGroups(){
+  const totalGroups = state.duplicateGroups.length;
+  const extraCopies = state.duplicateGroups.reduce((s,g)=>s+g.files.length-1,0);
+  const reclaimable = state.duplicateGroups.reduce((s,g)=>{
+    const keptSize = g.files[g.chosenIndex].size;
+    return s + g.files.reduce((s2,f)=>s2+(f===g.files[g.chosenIndex]?0:f.size),0);
+  },0);
+
+  $("dupStatGrid").innerHTML = `
+    <div class="stat-box"><div class="stat-label">Duplicate groups</div><div class="stat-value">${fmtNum(totalGroups)}</div></div>
+    <div class="stat-box accent2"><div class="stat-label">Extra copies</div><div class="stat-value">${fmtNum(extraCopies)}</div></div>
+    <div class="stat-box accent"><div class="stat-label">Space reclaimable</div><div class="stat-value">${fmtBytes(reclaimable)}</div></div>
+  `;
+
+  $("dupNoneState").classList.toggle("hidden", totalGroups > 0);
+  dupGroupsRendered = 0;
+  $("dupGroupList").innerHTML = "";
+  renderMoreDupGroups();
+  renderCloneCards();
+}
+function renderMoreDupGroups(){
+  const list = $("dupGroupList");
+  const end = Math.min(state.duplicateGroups.length, dupGroupsRendered + DUP_PAGE_SIZE);
+  for(let gi=dupGroupsRendered; gi<end; gi++){
+    const group = state.duplicateGroups[gi];
+    const el = document.createElement("div");
+    el.className = "dup-group";
+    const head = document.createElement("div");
+    head.className = "dup-group-head";
+    head.innerHTML = `<span>Group ${gi+1} \u00b7 ${group.files.length} copies \u00b7 ${fmtBytes(group.files[0].size)} each</span>`;
+    el.appendChild(head);
+    group.files.forEach((f, fi)=>{
+      const row = document.createElement("label");
+      row.className = "dup-file-row" + (fi===group.chosenIndex ? " chosen" : "");
+      const srcName = state.sources[f.sourceIndex] ? state.sources[f.sourceIndex].name : "?";
+      row.innerHTML = `
+        <input type="radio" name="dupgroup-${gi}" ${fi===group.chosenIndex?"checked":""}>
+        <div class="dup-thumb" id="thumb-${f.id}">${genericFileSvg()}</div>
+        <div class="dup-file-info">
+          <div class="dup-file-path">${escapeHtml(srcName)}/${escapeHtml(pathJoin(f.pathSegs, f.name))}</div>
+          <div class="dup-file-meta">${new Date(f.lastModified).toLocaleDateString()} \u00b7 ${fmtBytes(f.size)}</div>
+        </div>
+        ${fi===group.chosenIndex ? '<span class="keep-tag">Keep</span>' : '<span class="skip-tag">Skip</span>'}
+      `;
+      if(f.category === "Photos" || f.category === "Videos") loadThumb(f);
+      row.querySelector("input").addEventListener("change", ()=>{
+        group.chosenIndex = fi;
+        rerenderSingleGroup(gi, el, group);
+        updateDupStatsOnly();
+      });
+      el.appendChild(row);
+    });
+    list.appendChild(el);
+  }
+  dupGroupsRendered = end;
+  $("showMoreDupsBtn").classList.toggle("hidden", dupGroupsRendered >= state.duplicateGroups.length);
+}
+function genericFileSvg(){ return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5"/></svg>`; }
+function bundleSvg(){ return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 8l-9-5-9 5 9 5 9-5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 8v8l9 5 9-5V8M12 13v8" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`; }
+function trackThumbUrl(url){
+  state.thumbUrls.push(url);
+  while(state.thumbUrls.length > 150) URL.revokeObjectURL(state.thumbUrls.shift());
+}
+async function loadThumb(item, elId){
+  elId = elId || ("thumb-"+item.id);
+  try{
+    const handle = await resolveFileHandle(item);
+    const file = await handle.getFile();
+    const url = URL.createObjectURL(file);
+    trackThumbUrl(url);
+    const el = document.getElementById(elId);
+    if(!el) { URL.revokeObjectURL(url); return; }
+    if(item.category === "Photos"){
+      el.innerHTML = `<img src="${url}" alt="" loading="lazy">`;
+    } else {
+      el.innerHTML = `<video src="${url}" muted preload="metadata"></video>`;
+      const v = el.querySelector("video");
+      v.addEventListener("loadedmetadata", ()=>{ try{ v.currentTime = Math.min(0.5, v.duration/2); }catch(e){} });
+    }
+  }catch(e){ /* leave the generic icon in place */ }
+}
+
+/* ============================================================
+   EXIF (JPEG only): date taken, camera, dimensions
+   ============================================================ */
+function parseTiff(dv, base){
+  const little = dv.getUint16(base) === 0x4949;
+  const g16 = (o)=>dv.getUint16(o, little);
+  const g32 = (o)=>dv.getUint32(o, little);
+  if(g16(base+2) !== 42) return null;
+  const out = {};
+  const readStr = (o,count)=>{
+    let s = "";
+    for(let i=0;i<count;i++){ const c = dv.getUint8(o+i); if(!c) break; s += String.fromCharCode(c); }
+    return s.trim();
+  };
+  const readIFD = (ifdOff, handler)=>{
+    const p = base + ifdOff;
+    if(p + 2 > dv.byteLength) return;
+    const n = g16(p);
+    for(let i=0;i<n;i++){
+      const e = p + 2 + i*12;
+      if(e + 12 > dv.byteLength) break;
+      const tag = g16(e), type = g16(e+2), count = g32(e+4);
+      const size = (type===2 ? 1 : type===3 ? 2 : type===4 ? 4 : 0) * count;
+      const valOff = size > 4 ? base + g32(e+8) : e + 8;
+      handler(tag, type, count, valOff, e + 8);
+    }
+  };
+  let exifPtr = 0;
+  readIFD(g32(base+4), (tag,type,count,valOff,inline)=>{
+    if(tag === 0x010F && type === 2) out.make = readStr(valOff,count);
+    else if(tag === 0x0110 && type === 2) out.model = readStr(valOff,count);
+    else if(tag === 0x8769) exifPtr = g32(inline);
+  });
+  if(exifPtr){
+    readIFD(exifPtr, (tag,type,count,valOff,inline)=>{
+      if(tag === 0x9003 && type === 2) out.dateStr = readStr(valOff,count);
+      else if(tag === 0xA002) out.width = type === 3 ? g16(inline) : g32(inline);
+      else if(tag === 0xA003) out.height = type === 3 ? g16(inline) : g32(inline);
+    });
+  }
+  if(out.dateStr){
+    const m = out.dateStr.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+    if(m){
+      const t = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]).getTime();
+      if(!isNaN(t) && +m[1] > 1970) out.taken = t;
+    }
+  }
+  return out;
+}
+function parseExif(buf){
+  try{
+    const dv = new DataView(buf);
+    if(dv.byteLength < 12 || dv.getUint16(0) !== 0xFFD8) return null;
+    let off = 2;
+    while(off + 4 < dv.byteLength){
+      if(dv.getUint8(off) !== 0xFF) return null;
+      const marker = dv.getUint8(off+1);
+      if(marker === 0xDA) return null;
+      const len = dv.getUint16(off+2);
+      if(marker === 0xE1 && dv.getUint32(off+4) === 0x45786966) return parseTiff(dv, off+10);
+      off += 2 + len;
+    }
+  }catch(e){ /* truncated or malformed EXIF: treat as no data */ }
+  return null;
+}
+function isJpeg(item){ return !item.isBundle && (item.ext === "jpg" || item.ext === "jpeg"); }
+async function readExifFor(item){
+  if(state.exifCache.has(item.id)) return state.exifCache.get(item.id);
+  let ex = null;
+  try{
+    const h = await resolveFileHandle(item);
+    const f = await h.getFile();
+    ex = parseExif(await f.slice(0, 81920).arrayBuffer());
+  }catch(e){ /* unreadable */ }
+  state.exifCache.set(item.id, ex);
+  return ex;
+}
+function effDate(item){ return item.takenAt || item.lastModified; }
+
+/* ============================================================
+   BROWSE FILES OVERLAY
+   ============================================================ */
+let browsePage = 0;
+const BROWSE_PAGE_SIZE = 150;
+let browseSearchDebounce = null;
+
+function updateBrowseButtonVisibility(){
+  $("browseFilesBtn").classList.toggle("hidden", state.catalog.length === 0);
+}
+function getBrowseFiltered(){
+  const q = $("browseSearchInput").value.trim().toLowerCase();
+  const cat = $("browseCategoryFilter").value;
+  let items = state.catalog;
+  if(cat) items = items.filter(it=>it.category===cat);
+  if(q) items = items.filter(it=> pathJoin(it.pathSegs, it.name).toLowerCase().indexOf(q) !== -1);
+  const sort = $("browseSortSelect").value;
+  const sorted = items.slice();
+  if(sort==="name-asc") sorted.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(sort==="name-desc") sorted.sort((a,b)=>b.name.localeCompare(a.name));
+  else if(sort==="size-desc") sorted.sort((a,b)=>b.size-a.size);
+  else if(sort==="size-asc") sorted.sort((a,b)=>a.size-b.size);
+  else if(sort==="date-desc") sorted.sort((a,b)=>b.lastModified-a.lastModified);
+  else if(sort==="date-asc") sorted.sort((a,b)=>a.lastModified-b.lastModified);
+  else if(sort==="taken-desc") sorted.sort((a,b)=>effDate(b)-effDate(a));
+  else if(sort==="taken-asc") sorted.sort((a,b)=>effDate(a)-effDate(b));
+  return sorted;
+}
+function renderBrowseTable(){
+  const filtered = getBrowseFiltered();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / BROWSE_PAGE_SIZE));
+  browsePage = Math.min(Math.max(0,browsePage), totalPages-1);
+  const start = browsePage * BROWSE_PAGE_SIZE;
+  const pageItems = filtered.slice(start, start+BROWSE_PAGE_SIZE);
+
+  $("browseMeta").textContent = `${fmtNum(filtered.length)} of ${fmtNum(state.catalog.length)} files`;
+  $("browsePageLabel").textContent = `Page ${browsePage+1} of ${totalPages}`;
+  $("browsePrevBtn").disabled = browsePage <= 0;
+  $("browseNextBtn").disabled = browsePage >= totalPages-1;
+
+  const body = $("browseTableBody");
+  body.innerHTML = "";
+  pageItems.forEach(item=>{
+    const row = document.createElement("div");
+    row.className = "browse-row";
+    const srcName = state.sources[item.sourceIndex] ? state.sources[item.sourceIndex].name : "?";
+    const icon = item.isBundle ? bundleSvg() : genericFileSvg();
+    row.innerHTML = `
+      <div class="browse-row-main">
+        <div class="dup-thumb browse-thumb" id="bthumb-${item.id}">${icon}</div>
+        <div class="browse-col-name">
+          <div class="browse-name">${escapeHtml(item.name)}</div>
+          <div class="browse-path">${escapeHtml(srcName)}/${escapeHtml(pathJoin(item.pathSegs, ""))}</div>
+        </div>
+        <div class="browse-col-cat"><span class="skip-tag">${escapeHtml(item.category)}</span></div>
+        <div class="browse-col-size">${fmtBytes(item.size)}</div>
+        <div class="browse-col-date" title="${item.takenAt ? 'Date taken (from photo)' : 'File modified date'}">${new Date(effDate(item)).toLocaleDateString()}</div>
+      </div>
+    `;
+    row.addEventListener("click", ()=>toggleBrowseDetail(item, row));
+    body.appendChild(row);
+    if(!item.isBundle && (item.category === "Photos" || item.category === "Videos")) loadThumb(item, "bthumb-"+item.id);
+  });
+}
+function toggleBrowseDetail(item, row){
+  const existing = row.nextElementSibling;
+  if(existing && existing.classList.contains("browse-detail")){ existing.remove(); return; }
+  document.querySelectorAll(".browse-detail").forEach(d=>d.remove());
+  const srcName = state.sources[item.sourceIndex] ? state.sources[item.sourceIndex].name : "?";
+  const canPreview = !item.isBundle && (item.category === "Photos" || item.category === "Videos" || item.category === "Documents");
+  const detail = document.createElement("div");
+  detail.className = "browse-detail";
+  detail.innerHTML = `
+    <div><strong>Full path:</strong> ${escapeHtml(srcName)}/${escapeHtml(pathJoin(item.pathSegs, item.name))}</div>
+    <div><strong>Size:</strong> ${fmtBytes(item.size)}</div>
+    <div><strong>Modified:</strong> ${new Date(item.lastModified).toLocaleString()}</div>
+    <div><strong>Type:</strong> ${escapeHtml(item.category)}${item.ext ? " \u00b7 ." + escapeHtml(item.ext) : ""}</div>
+    ${item.isBundle ? `<div><strong>Contains:</strong> ${fmtNum(item.innerFileCount||0)} files inside</div>` : ""}
+    ${canPreview ? `<button class="btn btn-ghost btn-sm" id="previewBtn-${item.id}" style="margin-top:6px;">Open preview in new tab</button>` : ""}
+  `;
+  row.insertAdjacentElement("afterend", detail);
+  if(isJpeg(item)){
+    readExifFor(item).then(ex=>{
+      if(!ex || !detail.isConnected) return;
+      const lines = [];
+      if(ex.taken) lines.push(`<div><strong>Date taken:</strong> ${new Date(ex.taken).toLocaleString()}</div>`);
+      const cam = [ex.make, ex.model].filter(Boolean).join(" ");
+      if(cam) lines.push(`<div><strong>Camera:</strong> ${escapeHtml(cam)}</div>`);
+      if(ex.width && ex.height) lines.push(`<div><strong>Dimensions:</strong> ${ex.width} \u00d7 ${ex.height}</div>`);
+      if(lines.length) detail.insertAdjacentHTML("beforeend", lines.join(""));
+    });
+  }
+  if(canPreview){
+    document.getElementById("previewBtn-"+item.id).addEventListener("click", ()=>openPreview(item));
+  }
+}
+async function openPreview(item){
+  try{
+    const handle = await resolveFileHandle(item);
+    const file = await handle.getFile();
+    const url = URL.createObjectURL(file);
+    window.open(url, "_blank");
+  }catch(e){ alert("Couldn't open a preview for this file."); }
+}
+$("browseFilesBtn").addEventListener("click", ()=>{
+  browsePage = 0;
+  $("browseSearchInput").value = "";
+  $("browseCategoryFilter").value = "";
+  $("browseSortSelect").value = "name-asc";
+  renderBrowseTable();
+  $("browseOverlay").classList.remove("hidden");
+});
+async function indexPhotoDates(){
+  const btn = $("indexDatesBtn");
+  const todo = state.catalog.filter(it=>isJpeg(it) && !it.exifDone);
+  if(!todo.length){ btn.textContent = "Photo dates up to date"; setTimeout(()=>{ btn.textContent = "Read photo dates"; }, 2500); return; }
+  btn.disabled = true;
+  let done = 0, i = 0;
+  async function run(){
+    while(i < todo.length){
+      const it = todo[i++];
+      const ex = await readExifFor(it);
+      it.takenAt = (ex && ex.taken) ? ex.taken : 0;
+      it.exifDone = true;
+      state.exifCache.delete(it.id);
+      done++;
+      if(done % 25 === 0) btn.textContent = `Reading dates\u2026 ${fmtNum(done)}/${fmtNum(todo.length)}`;
+    }
+  }
+  await Promise.all(Array.from({length:6}, run));
+  btn.disabled = false;
+  btn.textContent = "Read photo dates";
+  idbSet("catalog", state.catalog).catch(()=>{});
+  renderBrowseTable();
+}
+$("indexDatesBtn").addEventListener("click", indexPhotoDates);
+$("closeBrowseBtn").addEventListener("click", ()=>{ $("browseOverlay").classList.add("hidden"); });
+$("browseSearchInput").addEventListener("input", ()=>{
+  clearTimeout(browseSearchDebounce);
+  browseSearchDebounce = setTimeout(()=>{ browsePage=0; renderBrowseTable(); }, 150);
+});
+$("browseCategoryFilter").addEventListener("change", ()=>{ browsePage=0; renderBrowseTable(); });
+$("browseSortSelect").addEventListener("change", ()=>{ browsePage=0; renderBrowseTable(); });
+$("browsePrevBtn").addEventListener("click", ()=>{ browsePage=Math.max(0,browsePage-1); renderBrowseTable(); });
+$("browseNextBtn").addEventListener("click", ()=>{ browsePage++; renderBrowseTable(); });
+function rerenderSingleGroup(gi, el, group){
+  const rows = el.querySelectorAll(".dup-file-row");
+  rows.forEach((row, fi)=>{
+    row.classList.toggle("chosen", fi===group.chosenIndex);
+    const tag = row.querySelector(".keep-tag,.skip-tag");
+    tag.className = fi===group.chosenIndex ? "keep-tag" : "skip-tag";
+    tag.textContent = fi===group.chosenIndex ? "Keep" : "Skip";
+  });
+}
+function updateDupStatsOnly(){
+  const extraCopies = state.duplicateGroups.reduce((s,g)=>s+g.files.length-1,0);
+  const reclaimable = state.duplicateGroups.reduce((s,g)=>{
+    return s + g.files.reduce((s2,f,fi)=>s2+(fi===g.chosenIndex?0:f.size),0);
+  },0);
+  const grid = $("dupStatGrid");
+  grid.children[1].querySelector(".stat-value").textContent = fmtNum(extraCopies);
+  grid.children[2].querySelector(".stat-value").textContent = fmtBytes(reclaimable);
+}
+$("showMoreDupsBtn").addEventListener("click", renderMoreDupGroups);
+$("toStep4Btn").addEventListener("click", ()=>{
+  idbSet("duplicateGroups", state.duplicateGroups.map(g=>({fullHash:g.fullHash, fileIds:g.files.map(f=>f.id), chosenIndex:g.chosenIndex})));
+  renderMigratePreview();
+  goToStep(4);
+});
+
+/* ============================================================
+   FOLDER CLONE DETECTION
+   ============================================================ */
+function dirKeysFor(f){
+  const keys = [];
+  for(let i=0;i<=f.pathSegs.length;i++) keys.push(f.sourceIndex + "|" + f.pathSegs.slice(0,i).join("/"));
+  return keys;
+}
+function keyParts(k){ const i = k.indexOf("|"); return {si:+k.slice(0,i), path:k.slice(i+1)}; }
+function keyInside(a,b){
+  const A = keyParts(a), B = keyParts(b);
+  if(A.si !== B.si) return false;
+  return B.path === "" || A.path === B.path || A.path.startsWith(B.path + "/");
+}
+function keyLabel(k){
+  const {si,path} = keyParts(k);
+  const n = state.sources[si] ? state.sources[si].name : "?";
+  return path ? n + "/" + path : n;
+}
+function fileUnderKey(f, key){
+  const {si,path} = keyParts(key);
+  if(f.sourceIndex !== si) return false;
+  if(path === "") return true;
+  const fp = f.pathSegs.join("/");
+  return fp === path || fp.startsWith(path + "/");
+}
+function detectFolderClones(){
+  const groups = state.duplicateGroups;
+  if(!groups.length) return [];
+  const groupOf = new Map();
+  groups.forEach(g=>g.files.forEach(f=>groupOf.set(f.id,g)));
+  const stats = new Map();
+  const dupKeys = new Map();
+  for(const f of state.catalog){
+    if(f.isBundle) continue;
+    const keys = dirKeysFor(f);
+    const isDup = groupOf.has(f.id);
+    if(isDup) dupKeys.set(f.id, keys);
+    for(const k of keys){
+      let s = stats.get(k);
+      if(!s){ s = {total:0, size:0, dup:[]}; stats.set(k,s); }
+      s.total++; s.size += f.size;
+      if(isDup) s.dup.push(f);
+    }
+  }
+  const found = [];
+  for(const [dKey, s] of stats){
+    if(s.total < 5 || s.dup.length !== s.total) continue;
+    const first = s.dup[0];
+    const g = groupOf.get(first.id);
+    const cands = new Set();
+    g.files.forEach(m=>{ if(m !== first) dupKeys.get(m.id).forEach(k=>cands.add(k)); });
+    let best = null;
+    for(const eKey of cands){
+      if(keyInside(dKey,eKey) || keyInside(eKey,dKey)) continue;
+      let ok = true;
+      for(const f of s.dup){
+        const gg = groupOf.get(f.id);
+        if(!gg.files.some(m => m !== f && dupKeys.get(m.id).indexOf(eKey) !== -1)){ ok = false; break; }
+      }
+      if(!ok) continue;
+      if(!best || stats.get(eKey).total < stats.get(best).total) best = eKey;
+    }
+    if(best) found.push({dKey, eKey:best, count:s.total, size:s.size, ids:s.dup.map(f=>f.id)});
+  }
+  const dSet = new Set(found.map(c=>c.dKey));
+  let result = found.filter(c=>{
+    const p = keyParts(c.dKey);
+    if(p.path === "") return true;
+    const segs = p.path.split("/");
+    for(let i=0;i<segs.length;i++){
+      if(dSet.has(p.si + "|" + segs.slice(0,i).join("/"))) return false;
+    }
+    return true;
+  });
+  const seen = new Set();
+  result = result.filter(c=>{
+    const pair = [c.dKey, c.eKey].sort().join("||");
+    if(seen.has(pair)) return false;
+    seen.add(pair); return true;
+  });
+  return result.sort((a,b)=>b.size-a.size).map(c=>{
+    const es = stats.get(c.eKey);
+    return {
+      dKey:c.dKey, eKey:c.eKey, dLabel:keyLabel(c.dKey), eLabel:keyLabel(c.eKey),
+      count:c.count, size:c.size, identical: es.total === c.count && es.size === c.size,
+      extra: Math.max(0, es.total - c.count), fileIds:c.ids, applied:null
+    };
+  });
+}
+function applyCloneChoice(c, side){
+  const key = side === "e" ? c.eKey : c.dKey;
+  const idToGroup = new Map();
+  state.duplicateGroups.forEach(g=>g.files.forEach(f=>idToGroup.set(f.id,g)));
+  c.fileIds.forEach(id=>{
+    const g = idToGroup.get(id);
+    if(!g) return;
+    let best = -1;
+    g.files.forEach((m,i)=>{
+      if(fileUnderKey(m,key) && (best < 0 || m.lastModified > g.files[best].lastModified)) best = i;
+    });
+    if(best >= 0) g.chosenIndex = best;
+  });
+  c.applied = side;
+  idbSet("duplicateGroups", state.duplicateGroups.map(g=>({fullHash:g.fullHash, fileIds:g.files.map(f=>f.id), chosenIndex:g.chosenIndex})));
+  renderDuplicateGroups();
+}
+function tailLabel(label){ return label.split("/").slice(-2).join("/"); }
+function renderCloneCards(){
+  const clones = state.clones || [];
+  $("cloneSection").classList.toggle("hidden", clones.length === 0);
+  const list = $("cloneCards");
+  list.innerHTML = "";
+  clones.slice(0,25).forEach(c=>{
+    const el = document.createElement("div");
+    el.className = "clone-card";
+    el.innerHTML = `
+      <div class="clone-title"><strong>${escapeHtml(c.dLabel)}</strong> ${c.identical ? "is identical to" : "is fully contained in"} <strong>${escapeHtml(c.eLabel)}</strong></div>
+      <div class="clone-meta">${fmtNum(c.count)} files \u00b7 ${fmtBytes(c.size)}${c.identical ? "" : " \u00b7 the second folder also has " + fmtNum(c.extra) + " other files"}</div>
+      <div class="clone-actions">
+        <button class="btn btn-sm ${c.applied==="d" ? "btn-hero" : "btn-ghost"}" data-side="d">Keep copies in ${escapeHtml(tailLabel(c.dLabel))}</button>
+        <button class="btn btn-sm ${c.applied==="e" ? "btn-hero" : "btn-ghost"}" data-side="e">Keep copies in ${escapeHtml(tailLabel(c.eLabel))}</button>
+      </div>`;
+    el.querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>applyCloneChoice(c, b.getAttribute("data-side"))));
+    list.appendChild(el);
+  });
+  if(clones.length > 25){
+    const more = document.createElement("div");
+    more.style.cssText = "font-size:0.78rem;color:var(--text-low);margin-bottom:10px;";
+    more.textContent = `+ ${clones.length - 25} smaller folder matches not shown`;
+    list.appendChild(more);
+  }
+}
+
+/* ============================================================
+   KEEP-SET COMPUTATION
+   ============================================================ */
+function getKeepItems(){
+  const skip = new Set();
+  state.duplicateGroups.forEach(g=>{
+    g.files.forEach((f,fi)=>{ if(fi !== g.chosenIndex) skip.add(f.id); });
+  });
+  return state.catalog.filter(item => !skip.has(item.id));
+}
+
+/* ============================================================
+   STEP 4: ORGANIZE / MIGRATE PREVIEW
+   ============================================================ */
+function renderMigratePreview(){
+  const keep = getKeepItems();
+  const byCat = {};
+  keep.forEach(item=>{
+    if(!byCat[item.category]) byCat[item.category] = {count:0, size:0};
+    byCat[item.category].count++;
+    byCat[item.category].size += item.size;
+  });
+  const grid = $("categoryGrid");
+  grid.innerHTML = "";
+  Object.keys(byCat).sort().forEach(cat=>{
+    const tile = document.createElement("div");
+    tile.className = "category-tile";
+    tile.innerHTML = `<div class="cat-name">${cat}</div><div class="cat-count">${fmtNum(byCat[cat].count)}</div><div class="cat-size">${fmtBytes(byCat[cat].size)}</div>`;
+    grid.appendChild(tile);
+  });
+  const bundleCount = keep.filter(i=>i.isBundle).length;
+  let bundleNoteEl = document.getElementById("bundleNote");
+  if(bundleCount > 0){
+    if(!bundleNoteEl){
+      bundleNoteEl = document.createElement("div");
+      bundleNoteEl.id = "bundleNote";
+      bundleNoteEl.className = "bundle-note";
+      grid.parentElement.insertBefore(bundleNoteEl, grid);
+    }
+    bundleNoteEl.innerHTML = `<span>&#128230;</span><span>${fmtNum(bundleCount)} app/project folder(s) detected (like .app or .photoslibrary bundles) &mdash; these are copied whole into "Bundles &amp; Projects" and never split apart or deduped internally.</span>`;
+  } else if(bundleNoteEl){
+    bundleNoteEl.remove();
+  }
+  $("migrateTargetRow").innerHTML = `<span class="folder-icon">${targetSvg()}</span><span class="folder-name">${escapeHtml(state.target.name)}</span>`;
+  $("migrateModeSummary").textContent = state.mode === "move"
+    ? `${fmtNum(keep.length)} items will be moved (originals deleted after copy)`
+    : `${fmtNum(keep.length)} items will be copied (originals untouched)`;
+  $("migratePreviewPanel").classList.remove("hidden");
+  $("migrateProgressPanel").classList.add("hidden");
+}
+
+$("startMigrateBtn").addEventListener("click", ()=>{
+  $("migratePreviewPanel").classList.add("hidden");
+  $("migrateProgressPanel").classList.remove("hidden");
+  runMigration();
+});
+$("cancelMigrateBtn").addEventListener("click", ()=>{ state.cancelRequested = true; });
+
+async function runMigration(){
+  state.cancelRequested = false;
+  state.skippedAlreadyPresent = 0;
+  const keepItems = getKeepItems();
+  const total = keepItems.length;
+  let done = 0, bytesDone = 0;
+  const migrateErrors = [];
+  const dirCache = new Map();
+
+  async function catDir(cat){
+    if(dirCache.has(cat)) return dirCache.get(cat);
+    const d = await getOrCreateDir(state.target.handle, cat);
+    dirCache.set(cat, d);
+    return d;
+  }
+
+  for(const item of keepItems){
+    if(state.cancelRequested) break;
+    try{
+      const catDirHandle = await catDir(item.category);
+
+      if(item.isBundle){
+        const parentDir = await resolveDirHandle(item.sourceIndex, item.pathSegs);
+        const srcBundleHandle = await parentDir.getDirectoryHandle(item.name);
+        const dest = await resolveBundleDestination(catDirHandle, srcBundleHandle, item.name);
+        let result;
+        if(dest.state === "complete"){ state.skippedAlreadyPresent++; result = {completed:true, failed:0}; }
+        else result = await copyDirectoryRecursive(srcBundleHandle, catDirHandle, dest.name);
+        if(result.completed && result.failed === 0){
+          if(state.mode === "move"){
+            try{ await parentDir.removeEntry(item.name, {recursive:true}); }
+            catch(e){ migrateErrors.push(`Copied but couldn't remove original bundle: ${pathJoin(item.pathSegs,item.name)}`); }
+          }
+          bytesDone += item.size;
+        } else if(result.completed){
+          migrateErrors.push(`${result.failed} file(s) inside ${pathJoin(item.pathSegs,item.name)} didn't copy cleanly \u2014 original bundle was left untouched`);
+        } else {
+          state.cancelRequested = true;
+        }
+      } else {
+        const srcHandle = await resolveFileHandle(item);
+        const file = await srcHandle.getFile();
+        const resolved = await resolveDestinationForFile(catDirHandle, item.name, file);
+        let verified = true;
+        if(resolved.alreadyPresent){
+          state.skippedAlreadyPresent++;
+        } else {
+          const destHandle = await catDirHandle.getFileHandle(resolved.name, {create:true});
+          const writable = await destHandle.createWritable();
+          await writable.write(file);
+          await writable.close();
+          const written = await destHandle.getFile();
+          verified = written.size === file.size;
+        }
+        if(!verified){
+          migrateErrors.push(`Size mismatch after copy, original kept: ${pathJoin(item.pathSegs,item.name)}`);
+        } else {
+          if(state.mode === "move"){
+            const parentDir = await resolveDirHandle(item.sourceIndex, item.pathSegs);
+            try{ await parentDir.removeEntry(item.name); }
+            catch(e){ migrateErrors.push(`Copied but couldn't remove original: ${pathJoin(item.pathSegs,item.name)}`); }
+          }
+          bytesDone += item.size;
+        }
+      }
+    }catch(e){
+      migrateErrors.push(`Failed: ${pathJoin(item.pathSegs, item.name)} (${e.message})`);
+    }
+    done++;
+    if(done % 5 === 0 || done === total){
+      $("migrateProgressText").textContent = `${fmtNum(done)} of ${fmtNum(total)} items`;
+      $("migrateProgressPct").textContent = total ? Math.round(done/total*100)+"%" : "0%";
+      $("migrateProgressFill").style.width = total ? (done/total*100)+"%" : "0%";
+      $("migrateCurrentPath").textContent = pathJoin(item.pathSegs, item.name);
+    }
+    if(done % 150 === 0) await yieldToUI();
+  }
+
+  state.errors = state.errors.concat(migrateErrors);
+  if(migrateErrors.length){
+    $("migrateErrorLog").classList.remove("hidden");
+    $("migrateErrorLog").innerHTML = migrateErrors.slice(0,200).map(e=>`<div>${escapeHtml(e)}</div>`).join("");
+  }
+
+  log(`Migration ${state.cancelRequested?"cancelled":"finished"}: ${done}/${total} items, ${state.skippedAlreadyPresent} already present, ${migrateErrors.length} errors`);
+
+  if(state.cancelRequested){
+    goToStep(4);
+    renderMigratePreview();
+    return;
+  }
+
+  showDone(done, bytesDone, migrateErrors.length);
+}
+
+/* ============================================================
+   STEP 5: DONE
+   ============================================================ */
+function renderInsights(){
+  const keep = getKeepItems();
+
+  const catSizes = {};
+  keep.forEach(it=>{ catSizes[it.category] = (catSizes[it.category]||0) + it.size; });
+  const maxCatSize = Math.max(1, ...Object.values(catSizes));
+  $("insightsByCategory").innerHTML = Object.keys(catSizes).length ? Object.keys(catSizes).sort((a,b)=>catSizes[b]-catSizes[a]).map(cat=>`
+    <div class="insight-row">
+      <span class="insight-label">${escapeHtml(cat)}</span>
+      <span class="insight-bar-track"><span class="insight-bar-fill" style="width:${(catSizes[cat]/maxCatSize*100)}%"></span></span>
+      <span class="insight-value">${fmtBytes(catSizes[cat])}</span>
+    </div>`).join("") : `<div style="color:var(--text-low);font-size:0.82rem;">Nothing organized yet</div>`;
+
+  const byYear = {};
+  keep.forEach(it=>{
+    const y = new Date(it.lastModified).getFullYear();
+    byYear[y] = (byYear[y]||0) + it.size;
+  });
+  const years = Object.keys(byYear).sort((a,b)=>b-a);
+  const maxYearSize = Math.max(1, ...Object.values(byYear));
+  $("insightsByYear").innerHTML = years.length ? years.map(y=>`
+    <div class="insight-row">
+      <span class="insight-label">${y}</span>
+      <span class="insight-bar-track"><span class="insight-bar-fill" style="width:${(byYear[y]/maxYearSize*100)}%"></span></span>
+      <span class="insight-value">${fmtBytes(byYear[y])}</span>
+    </div>`).join("") : `<div style="color:var(--text-low);font-size:0.82rem;">No dated files</div>`;
+
+  const withWaste = state.duplicateGroups.map(g=>({
+    g,
+    waste: g.files.reduce((s,f,fi)=>s+(fi===g.chosenIndex?0:f.size),0)
+  })).sort((a,b)=>b.waste-a.waste).slice(0,5);
+  const maxWaste = Math.max(1, ...withWaste.map(w=>w.waste));
+  $("insightsTopDupes").innerHTML = withWaste.length ? withWaste.map(w=>`
+    <div class="insight-row">
+      <span class="insight-label" title="${escapeHtml(w.g.files[0].name)}">${escapeHtml(w.g.files[0].name)}</span>
+      <span class="insight-bar-track"><span class="insight-bar-fill" style="width:${(w.waste/maxWaste*100)}%"></span></span>
+      <span class="insight-value">${fmtBytes(w.waste)}</span>
+    </div>`).join("") : `<div style="color:var(--text-low);font-size:0.82rem;">No duplicates found</div>`;
+}
+
+function showDone(filesOrganized, bytesWritten, errorCount){
+  const dupesSkipped = state.duplicateGroups.reduce((s,g)=>s+g.files.length-1,0);
+  const spaceReclaimed = state.duplicateGroups.reduce((s,g)=>{
+    return s + g.files.reduce((s2,f,fi)=>s2+(fi===g.chosenIndex?0:f.size),0);
+  },0);
+  $("doneFilesOrganized").textContent = fmtNum(filesOrganized);
+  $("doneDupesSkipped").textContent = fmtNum(dupesSkipped);
+  $("doneSpaceReclaimed").textContent = fmtBytes(spaceReclaimed);
+  $("doneSummaryLine").textContent = `${fmtNum(filesOrganized)} items written to ${state.target.name} \u00b7 ${fmtBytes(bytesWritten)}`;
+  if(errorCount > 0){
+    $("doneErrorNote").classList.remove("hidden");
+    $("doneErrorNote").innerHTML = `<span>&#9888;</span><span>${errorCount} file(s) hit an error and were skipped \u2014 see the session log for details.</span>`;
+  } else {
+    $("doneErrorNote").classList.add("hidden");
+  }
+  if(state.skippedAlreadyPresent > 0){
+    $("doneInfoNote").classList.remove("hidden");
+    $("doneInfoNote").innerHTML = `<span>&#8635;</span><span>${fmtNum(state.skippedAlreadyPresent)} file(s) were already in place from a previous run and were left untouched.</span>`;
+  } else {
+    $("doneInfoNote").classList.add("hidden");
+  }
+  renderInsights();
+  idbSet("stage", "complete");
+  goToStep(5);
+}
+
+$("downloadLogBtn").addEventListener("click", ()=>{
+  const lines = [
+    "Undupe session log",
+    `Generated ${new Date().toString()}`,
+    "",
+    ...state.sessionLog,
+    "",
+    "Errors:",
+    ...(state.errors.length ? state.errors : ["(none)"])
+  ];
+  const blob = new Blob([lines.join("\n")], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `undupe-log-${Date.now()}.txt`;
+  a.click();
+});
+
+/* ============================================================
+   PERSISTENCE / RESUME
+   ============================================================ */
+async function persistHandles(){
+  await idbSet("sourceHandles", state.sources);
+  await idbSet("targetHandle", state.target);
+}
+
+async function tryLoadResumeState(){
+  const [sourceHandles, targetHandle, settings, catalog, stage, dupGroupsRaw] = await Promise.all([
+    idbGet("sourceHandles"), idbGet("targetHandle"), idbGet("settings"),
+    idbGet("catalog"), idbGet("stage"), idbGet("duplicateGroups")
+  ]);
+  if(!sourceHandles && !targetHandle) return false;
+
+  $("resumeBanner").classList.remove("hidden");
+  let detail = "Your saved folders are ready to restore.";
+  if(stage === "catalog-done") detail = `A previous scan cataloged ${(catalog||[]).length} files \u2014 restore access to pick up where you left off.`;
+  if(stage === "hash-done") detail = `A previous scan found ${(dupGroupsRaw||[]).length} duplicate group(s) \u2014 restore access to review them.`;
+  $("resumeDetail").textContent = detail;
+
+  $("resumeContinueBtn").onclick = async ()=>{
+    $("resumeContinueBtn").disabled = true;
+    $("resumeContinueBtn").textContent = "Restoring\u2026";
+    let ok = true;
+    if(sourceHandles){
+      for(const s of sourceHandles){
+        if(!(await verifyPermission(s.handle, "read"))) ok = false;
+      }
+      state.sources = sourceHandles;
+    }
+    if(targetHandle){
+      if(!(await verifyPermission(targetHandle.handle, "readwrite"))) ok = false;
+      state.target = targetHandle;
+    }
+    if(settings){ state.dupRule = settings.dupRule || "newest"; state.mode = settings.mode || "copy"; syncSettingsUI(); }
+
+    renderSources(); renderTarget(); updateBeginScanEnabled();
+    $("resumeBanner").classList.add("hidden");
+
+    if(!ok){
+      alert("Some folders couldn't be re-accessed (they may have been moved or renamed). Please re-add them.");
+      return;
+    }
+
+    if(stage === "hash-done" && catalog && dupGroupsRaw){
+      state.catalog = catalog;
+      updateBrowseButtonVisibility();
+      const byId = new Map(catalog.map(f=>[f.id,f]));
+      state.duplicateGroups = dupGroupsRaw.map(g=>({
+        fullHash: g.fullHash,
+        files: g.fileIds.map(id=>byId.get(id)),
+        chosenIndex: g.chosenIndex
+      }));
+      try{ state.clones = detectFolderClones(); }catch(e){ state.clones = []; }
+      renderDuplicateGroups();
+      goToStep(3);
+    } else if(stage === "catalog-done" && catalog){
+      state.catalog = catalog;
+      updateBrowseButtonVisibility();
+      goToStep(2);
+      runHashPhases();
+    }
+  };
+  $("resumeDiscardBtn").onclick = async ()=>{
+    await idbClearAll();
+    $("resumeBanner").classList.add("hidden");
+  };
+  return true;
+}
+
+function syncSettingsUI(){
+  document.querySelector(`input[name="dupRule"][value="${state.dupRule}"]`).checked = true;
+  $("modeToggle").checked = state.mode === "move";
+  $("modeToggle").dispatchEvent(new Event("change"));
+}
+
+/* ============================================================
+   PWA: install button, offline cache, safe update prompt
+   ============================================================ */
+function isBusy(){
+  return currentStep === 2 || (currentStep === 4 && !$("migrateProgressPanel").classList.contains("hidden"));
+}
+function initPWA(){
+  let deferredInstall = null;
+  window.addEventListener("beforeinstallprompt", (e)=>{
+    e.preventDefault();
+    deferredInstall = e;
+    $("installBtn").classList.remove("hidden");
+  });
+  window.addEventListener("appinstalled", ()=>{
+    deferredInstall = null;
+    $("installBtn").classList.add("hidden");
+  });
+  $("installBtn").addEventListener("click", async ()=>{
+    if(!deferredInstall) return;
+    deferredInstall.prompt();
+    try{ await deferredInstall.userChoice; }catch(e){ /* dismissed */ }
+    deferredInstall = null;
+    $("installBtn").classList.add("hidden");
+  });
+
+  if(!("serviceWorker" in navigator) || !/^https?:$/.test(location.protocol)) return;
+  let updateRequested = false, waitingWorker = null;
+  const offer = (worker)=>{ waitingWorker = worker; $("updateToast").classList.remove("hidden"); };
+  navigator.serviceWorker.register("sw.js").then(reg=>{
+    if(reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+    reg.addEventListener("updatefound", ()=>{
+      const nw = reg.installing;
+      if(!nw) return;
+      nw.addEventListener("statechange", ()=>{
+        if(nw.state === "installed" && navigator.serviceWorker.controller) offer(nw);
+      });
+    });
+  }).catch(()=>{ /* offline support is optional; the app still works online */ });
+  // Never reload on its own: a scan or migration may be running. Only reload after the user asks.
+  $("updateNowBtn").addEventListener("click", ()=>{
+    if(isBusy() && !confirm("A scan or migration is running. Updating now will stop it. Update anyway?")) return;
+    updateRequested = true;
+    if(waitingWorker) waitingWorker.postMessage("SKIP_WAITING");
+  });
+  $("updateLaterBtn").addEventListener("click", ()=>{ $("updateToast").classList.add("hidden"); });
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(updateRequested) location.reload(); });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+async function init(){
+  if(!window.showDirectoryPicker || !window.indexedDB || !window.crypto || !window.crypto.subtle){
+    $("gateScreen").classList.remove("hidden");
+    return;
+  }
+  $("appRoot").classList.remove("hidden");
+  renderRail();
+  goToStep(1);
+  await tryLoadResumeState();
+}
+
+init();
+initPWA();
+
+})();
+</script>
+</body>
+</html>
