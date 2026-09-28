@@ -1,14 +1,155 @@
-# UnDupe Reclaim gigabytes of wasted storage without risking a single byte.
-UnDupe Reclaim gigabytes of wasted storage without risking a single byte.The zero-dependency, media-aware deduplication and directory migration suite running directly in your browser.
+<p align="center">
+  <img src="banner.png" alt="Undupe: find duplicates, keep what matters, organize the rest" width="100%">
+</p>
 
-⚡ Why UnDupe?Decades of file transfers, hard drive backups, and device upgrades leave behind a chaotic trail of digital debris: Backup_2018, Old Laptop Dump, and DCIM_Final_Copy (2).Standard file search tools force you to inspect thousands of messy duplicate rows one by one. UnDupe changes the game by combining cryptographic binary hashing, folder-level clone detection, and smart media previews into a zero-installation, high-performance web suite.[ Phase 1: Local Ingestion ] ──> [ Phase 2: SHA-256 Fingerprinting ] ──> [ Phase 3: Macro Merge ] ──> [ Phase 4: Staged Migration ]
+<h2 align="center">Years of backups. One clean archive.</h2>
 
-🔥 Key Features
-⚡ Zero-Install Client-Side Engine: Runs 100% locally in Chrome or Edge using the File System Access API. No Python servers, Node.js packages, or terminal setup required.
-📂 Folder Clone Detection ("Macro Merge"): Stop checking 10,000 individual photo boxes. If Folder A is a 100% binary clone of Folder B, UnDupe flags the entire directory structure for a single-click folder resolve.
-🛡️ 100% Safe Staging Mode: Source drives remain untouched until you approve the final layout. Build a virtual map and stream unique files directly onto a clean destination drive.
-🎞️ Media-Aware Visual Diff: Preview photos, videos, and documents side-by-side with resolution and EXIF data before deciding which copy to keep.
-🧩 App & Bundle Protection: Intelligently recognizes complex application packages (.app, .photoslibrary, .xcodeproj, .logicx) and preserves them intact without splitting them apart.
-💾 Local Session Persistence: Saved via IndexedDB—if you close your tab or refresh, your cataloging state and duplicate matches are instantly restored.
-🚀 Quick Start (One-File Setup)UnDupe requires zero terminal configuration.Download or save undupe.html.Double-click to open it in Google Chrome or Microsoft Edge.Select your Source Folders and your Clean Output Directory.Click Begin Scan and let UnDupe handle the heavy lifting!⚙️ How It WorksTiered Hashing EngineUnDupe uses a high-performance 3-Stage Sieve to catalog terabytes of data without thrashing your hard drive:StageMechanismPurposeStage 1: Size GroupingExact byte-count sortingInstantly filters out 90%+ of unique files.Stage 2: Partial Hashing512 KB Head/Tail hashRapidly eliminates non-matching large files/videos.Stage 3: Full SHA-256Multi-threaded Web WorkersConfirms exact 100% byte-for-byte binary matches.🛠️ Technology StackFrontend: HTML5, Modern CSS (Custom Glassmorphism Tokens), Vanilla JS (ES6+)APIs: File System Access API, Web Crypto API (crypto.subtle), Web WorkersStorage: IndexedDB (meta k/v store for catalog checkpoints)Design System: Playfair Display + DM Sans typography with high-contrast Dark/Light theme toggles
-📜 Session Audit LoggingEvery operation performed in UnDupe is recorded in a real-time session log. At the end of a migration run, export your full JSON/TXT audit report detailing every file scanned, copied, moved, or skipped for complete peace of mind.Built for privacy, speed, and digital clarity. Clean your drives with UnDupe today. 
+<p align="center">
+  Undupe finds the exact duplicate files hiding across your drives, lets you decide which copy survives,
+  and rebuilds everything into a tidy, organized folder.<br>
+  It all happens in your browser. Nothing is uploaded, and there is nothing to install.
+</p>
+
+<p align="center">
+  <a href="https://johnlaz.github.io/undupe/"><b>Open Undupe &rarr;</b></a>
+  &nbsp;&middot;&nbsp; Chrome &amp; Edge on desktop
+  &nbsp;&middot;&nbsp; Free
+</p>
+
+<br>
+
+<p align="center">
+  <img src="screenshot-review.png" alt="Reviewing duplicates, with a folder-clone card and thumbnails" width="92%">
+</p>
+
+---
+
+## The problem
+
+You have been backing up for years. Old laptops, phone dumps, external drives, "Copy of Copy of Photos (2)".
+Somewhere in there is the only copy of something you love, buried under a dozen copies of everything else.
+
+Most cleanup tools want you to trust an algorithm with your memories, or upload them somewhere.
+**Undupe does neither.** It shows its work, asks before it acts, and never leaves your machine.
+
+## How it works
+
+| | |
+| :-- | :-- |
+| **1. Point** | Pick one or more source folders and an empty output folder. |
+| **2. Scan** | Undupe catalogs everything, then fingerprints only the files that could possibly match. |
+| **3. Review** | See every duplicate group with real thumbnails. Newest wins by default; change any decision in a click. |
+| **4. Organize** | Files land in a clean folder sorted into Photos, Videos, Documents, Audio and more. Copy or move, your choice. |
+
+## What makes it different
+
+**Exact matches only.** Files are compared by their SHA-256 fingerprints, never by name, date or size alone.
+If Undupe says two files are duplicates, they are identical, byte for byte.
+
+**Built for big archives.** A three-stage pipeline (size, then a quick partial fingerprint, then a full one)
+means most files are never read in full. Huge videos are hashed in chunks, so a multi-gigabyte clip
+does not crash the tab. The scan runs in background workers, so the interface stays responsive.
+
+**Folder clone detection.** Instead of making thousands of file-by-file decisions, Undupe spots whole folders
+that already exist somewhere else:
+
+> **Backups/2018** is fully contained in **Pictures/2018** &mdash; 1,200 files, 42 GB
+> &nbsp;&nbsp;`Keep copies in Backups/2018` &nbsp; `Keep copies in Pictures/2018`
+
+One click settles the whole folder.
+
+**Apps and libraries stay in one piece.** Folders like `.app` bundles and `.photoslibrary` or `.logicx`
+packages are recognized and copied whole. They are never scanned file by file and never scattered across
+your Photos and Documents folders.
+
+**A viewer that beats Explorer for this job.** Search your entire archive across every source at once, sort by
+name, size, date, or the date a photo was actually taken (read from its EXIF data), filter by type,
+and click any file for its details and a full preview.
+
+**Beautiful on purpose.** A frosted-glass interface with matching dark and light themes.
+
+## Built to be trusted
+
+Your files are precious, so Undupe is conservative by design:
+
+- **Copy mode never touches your originals.** Move mode is opt-in.
+- **Move verifies before it deletes.** Each copy is size-checked first, and if anything looks off the original stays.
+- **It never overwrites a different file.** Same name, different content? Both are kept, and the second is renamed `name (1)`.
+- **Safe to interrupt and re-run.** Already-copied files are recognized and skipped, so resuming never piles up duplicates.
+- **Overlap guard.** It refuses an output folder that sits inside a source, or the reverse.
+- **You see the plan first.** A preview shows exactly what will be written before anything is.
+
+## Private by design
+
+- **No server, no account, no analytics.** After the page loads, Undupe makes zero network requests. Open your
+  browser's network tab and see for yourself.
+- Fonts and icons are bundled, so it **works fully offline**.
+- Folder access is granted by you through the browser's own picker, and the browser may ask again in later sessions.
+
+## Get it
+
+**Use it right now:** open the link above in Chrome or Edge. To make it feel like a native app, click
+**Install app** in the header (or use the install icon in the address bar). It then runs in its own window
+and launches offline.
+
+**Requirements:** a desktop Chrome or Edge browser. Undupe relies on the File System Access API to read and
+write real folders, which Firefox and Safari do not offer yet.
+
+## FAQ
+
+**Does it upload my files?**
+No. Everything runs locally. There is no backend.
+
+**Will it delete anything?**
+Only if you choose Move mode, and then only files it has verified were copied. Copy mode, the default,
+leaves your originals alone.
+
+**What counts as a duplicate?**
+Byte-for-byte identical content, regardless of file name or location. Resized or re-exported versions of a
+photo are different files and are not matched (yet).
+
+**Which copy does it keep?**
+By default the newest by modified date. You can switch to oldest, override any group, or settle whole
+folders at once with folder clones.
+
+**My file dates are wrong because my backups reset them.**
+The viewer can read the real capture date from JPEG photos (EXIF) and sort by it, along with the camera
+model and dimensions. Other formats fall back to the file date.
+
+**How big an archive can it handle?**
+It is built with large archives in mind (tiered fingerprinting, background workers, chunked hashing), and scan
+speed is mostly limited by how fast your drive can be read. Start with a small folder to see how it behaves on
+your hardware.
+
+**Why doesn't it work in Firefox or Safari?**
+They do not support the browser API that lets a web page work with real folders on your drive.
+
+---
+
+## Host your own copy
+
+Undupe is a static site: no build step, no dependencies, no server.
+
+1. Put every file in this folder in the root of a GitHub repository.
+2. **Settings &rarr; Pages &rarr; Deploy from a branch &rarr; `main` / `(root)`.**
+3. Visit `https://<you>.github.io/<repo>/`.
+
+| File | Purpose |
+| --- | --- |
+| `index.html` | The entire app: HTML, CSS and JavaScript in one file |
+| `manifest.webmanifest`, `sw.js` | Install metadata, offline cache and update prompt |
+| `icon-*.png`, `apple-touch-icon.png`, `favicon.*` | App and browser icons |
+| `dm-sans.woff2`, `playfair-display.woff2` | Self-hosted fonts, so nothing loads from a third party |
+| `banner.png`, `screenshot-*.png` | Images for this README (not used by the app) |
+
+**Releasing an update:** replace the files and push. Installed copies pick up the change on their next
+launch. To move everyone over immediately, bump `VERSION` in `sw.js`; the app then offers a
+"Reload to update" prompt and never reloads on its own, in case a scan is running.
+
+<p align="center">
+  <img src="screenshot-review-light.png" alt="Undupe in light mode" width="46%">
+  &nbsp;
+  <img src="screenshot-browse.png" alt="Browsing and searching an entire archive" width="46%">
+</p>
+
+<p align="center"><sub>Made by LAZLAB Creations</sub></p>
