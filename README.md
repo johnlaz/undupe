@@ -101,6 +101,39 @@ online version for that. To update, download it again.
 **Requirements:** a desktop Chrome or Edge browser. Undupe relies on the File System Access API to read and
 write real folders, which Firefox and Safari do not offer yet.
 
+### Installing it as a local desktop app, without hosting it anywhere
+
+The **Install app** button only works from a page loaded over `https://` or `http://localhost` — that's a
+browser security rule (a "secure context"), not something a manifest setting can override, and it's why a
+double-clicked `undupe.html` file can't be installed even though it runs perfectly well offline. `localhost`
+counts as secure, though, so you can get a real installed copy, with its own icon and window, entirely on
+your own machine:
+
+1. Get this folder onto your computer (clone the repo, or download and unzip it).
+2. Serve it over `http://localhost` with anything that can serve static files — for example, with
+   [Node](https://nodejs.org) installed, run `npx serve .` from this folder; with Python, run
+   `python3 -m http.server 8080`. Either way, note the port it prints.
+3. Open `http://localhost:<port>/app/` in Chrome or Edge and click **Install app** (or the install icon in
+   the address bar).
+
+That's it — the install only needs the local server for that one moment, to fetch the manifest and let the
+service worker cache the app. After that, the installed app runs from its own window and launches straight
+from the cache, so the server doesn't need to be running the next time you open it. (Chrome does try a quick
+background check for a newer version each time you launch it if it happens to have internet access, but it
+silently falls back to the cached version if it doesn't — nothing breaks either way.)
+
+One real limitation: a PWA installed from `http://localhost:8080` and one installed from the hosted
+`https://...github.io` URL are two separate apps, each permanently tied to the address it was installed
+from — that's a browser security boundary (an installed app can't be silently repointed at a different
+origin), not a bug here. Pick whichever one you'll actually use.
+
+If you want an actual standalone executable with no browser/localhost step at all — something you could hand
+to someone else to double-click — that means wrapping the app in something like [Tauri](https://tauri.app)
+or [Electron](https://www.electronjs.org), which bundle a tiny server and a browser engine into one binary.
+That's real, separate tooling (a Rust or Node build step, not just editing this HTML file), so it's not
+something this repo does today, but the app is already a single self-contained file, which makes it a
+reasonably light lift to wrap if you want to take that on.
+
 ## FAQ
 
 **Does it upload my files?**
