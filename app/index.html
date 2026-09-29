@@ -344,6 +344,7 @@
 
   /* ---------- progress ---------- */
   .phase-label{font-size:1rem;color:var(--accent-bright);font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+  .phase-step{margin-left:auto;font-size:0.76rem;font-weight:500;color:var(--text-low);font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;white-space:nowrap;}
   .spinner{
     width:16px;height:16px;border-radius:50%;
     border:2px solid rgba(var(--accent-bright-rgb),0.25);border-top-color:var(--accent-bright);
@@ -360,7 +361,9 @@
   }
   .progress-fill.indeterminate{width:35% !important;animation:indet 1.4s ease-in-out infinite;}
   @keyframes indet{0%{margin-left:-35%;}100%{margin-left:100%;}}
-  .progress-meta{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-low);margin-bottom:20px;}
+  .progress-meta{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-low);margin-bottom:6px;}
+  .progress-sub{display:flex;justify-content:space-between;gap:12px;font-size:0.76rem;color:var(--text-low);margin-bottom:20px;font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;}
+  .progress-sub span:empty{display:none;}
   .current-path{font-size:0.76rem;color:var(--text-low);font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:20px;}
 
   .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}
@@ -459,6 +462,11 @@
     color:var(--text-hi);background:var(--recess);border:1px solid var(--border-glass);box-shadow:var(--inset-recess);
   }
   input[type="text"].bare::placeholder{color:var(--text-low);}
+  textarea.bare{
+    width:100%;padding:10px 12px;border-radius:10px;font-size:0.85rem;font-family:inherit;line-height:1.5;
+    color:var(--text-hi);background:var(--recess);border:1px solid var(--border-glass);box-shadow:var(--inset-recess);resize:vertical;
+  }
+  textarea.bare::placeholder{color:var(--text-low);}
   select.bare option{background:var(--panel-solid);color:var(--text-hi);}
 
   /* ---------- browse overlay ---------- */
@@ -687,6 +695,13 @@
             </div>
           </div>
 
+          <div style="height:26px;"></div>
+          <div class="section-label">Skip these folders <span style="color:var(--text-low);font-weight:400;">&mdash; optional, one per line</span></div>
+          <div class="option-card">
+            <textarea id="excludeInput" class="bare" rows="3" placeholder="e.g.&#10;OneDrive&#10;node_modules"></textarea>
+            <div class="rr-desc" style="margin-top:10px;">Any folder whose path contains this text is skipped entirely &mdash; matched anywhere, so "OneDrive" also catches subfolders inside it. Handy for cloud-synced drives (OneDrive, Dropbox, iCloud Drive): files that haven't finished downloading can stall a scan for a long time while the browser waits on them.</div>
+          </div>
+
           <div id="overlapWarning" class="warn-note hidden" style="margin-top:20px;"></div>
 
           <div class="footer-row">
@@ -701,9 +716,10 @@
           <h2 class="serif">Scanning your archive</h2>
           <p class="sub">This runs in the background &mdash; feel free to leave the tab open and come back.</p>
 
-          <div class="phase-label"><span class="spinner" id="phaseSpinner"></span><span id="phaseText">Cataloging files&hellip;</span></div>
+          <div class="phase-label"><span class="spinner" id="phaseSpinner"></span><span id="phaseText">Cataloging files&hellip;</span><span class="phase-step" id="phaseStep">Step 1 of 4</span></div>
           <div class="progress-track"><div class="progress-fill indeterminate" id="scanProgressFill"></div></div>
           <div class="progress-meta"><span id="scanProgressText">Starting&hellip;</span><span id="scanProgressPct"></span></div>
+          <div class="progress-sub"><span id="scanRate">&nbsp;</span><span id="scanEta"></span></div>
           <div class="current-path" id="scanCurrentPath">&nbsp;</div>
 
           <div class="stat-grid">
@@ -714,7 +730,7 @@
 
           <div class="footer-row split">
             <button id="cancelScanBtn" class="btn btn-danger btn-sm">Cancel scan</button>
-            <span style="font-size:0.78rem;color:var(--text-low);align-self:center;">Progress is saved automatically after cataloging</span>
+            <span style="font-size:0.78rem;color:var(--text-low);align-self:center;">Checkpoints save every 2,500 files, in case you need to close the tab</span>
           </div>
         </div>
       </section>
@@ -768,6 +784,7 @@
           <h2 class="serif">Writing your clean archive</h2>
           <div class="progress-track"><div class="progress-fill" id="migrateProgressFill"></div></div>
           <div class="progress-meta"><span id="migrateProgressText">0 of 0 files</span><span id="migrateProgressPct">0%</span></div>
+          <div class="progress-sub"><span id="migrateRate">&nbsp;</span><span id="migrateEta"></span></div>
           <div class="current-path" id="migrateCurrentPath">&nbsp;</div>
           <div class="footer-row split">
             <button id="cancelMigrateBtn" class="btn btn-danger btn-sm">Cancel</button>
@@ -891,6 +908,14 @@ function isBundleDir(name){
   return BUNDLE_DIR_EXT.has(name.slice(dot+1).toLowerCase());
 }
 const CATALOG_CHECKPOINT_EVERY = 2500;
+const FILE_READ_TIMEOUT_MS = 25000;   // cataloging + partial hashing: metadata/small reads should never take this long
+const FULL_HASH_TIMEOUT_MS = 180000;  // full hashing: large legitimate files (multi-GB video) need real headroom
+function withTimeout(promise, ms, label){
+  let timer;
+  const timeout = new Promise((_,reject)=>{ timer = setTimeout(()=>reject(new Error("timeout:"+(label||""))), ms); });
+  return Promise.race([promise, timeout]).finally(()=>clearTimeout(timer));
+}
+function isTimeoutError(e){ return e && /^timeout:/.test(e.message||""); }
 const HASH_WORKER_SRC = `
 self.onmessage = async (e) => {
   const { id, file, mode } = e.data;
@@ -1032,6 +1057,7 @@ const state = {
   sessionLog: [],
   thumbUrls: [],
   clones: [],
+  excludePatterns: [],
   exifCache: new Map(),
   skippedAlreadyPresent: 0
 };
@@ -1075,10 +1101,16 @@ async function verifyPermission(handle, mode){
   }catch(e){ /* handle may be stale */ }
   return false;
 }
+function isExcludedPath(name, pathSegs){
+  if(!state.excludePatterns.length) return false;
+  const full = (pathJoin(pathSegs, name)).toLowerCase();
+  return state.excludePatterns.some(p => full.indexOf(p) !== -1);
+}
 async function* walkDirectory(dirHandle, sourceIndex, pathSegs){
   pathSegs = pathSegs || [];
   for await (const [name, handle] of dirHandle.entries()){
     if(name.startsWith(".") || SKIP_NAMES.has(name)) continue;
+    if(isExcludedPath(name, pathSegs)){ state.excludedCount = (state.excludedCount||0) + 1; continue; }
     if(handle.kind === "directory"){
       if(isBundleDir(name)){
         yield {bundle:true, handle, sourceIndex, pathSegs, name};
@@ -1091,19 +1123,19 @@ async function* walkDirectory(dirHandle, sourceIndex, pathSegs){
   }
 }
 async function measureDirectory(dirHandle){
-  let size = 0, count = 0, lastModified = 0;
+  let size = 0, count = 0, lastModified = 0, skipped = 0;
   for await (const [name, handle] of dirHandle.entries()){
     if(handle.kind === "directory"){
       const sub = await measureDirectory(handle);
-      size += sub.size; count += sub.count; lastModified = Math.max(lastModified, sub.lastModified);
+      size += sub.size; count += sub.count; lastModified = Math.max(lastModified, sub.lastModified); skipped += sub.skipped;
     } else {
       try{
-        const f = await handle.getFile();
+        const f = await withTimeout(handle.getFile(), FILE_READ_TIMEOUT_MS, "getFile");
         size += f.size; count++; lastModified = Math.max(lastModified, f.lastModified);
-      }catch(e){ /* skip unreadable entries */ }
+      }catch(e){ skipped++; /* unreadable or stuck (e.g. an undownloaded cloud file) — measure the rest, don't hang */ }
     }
   }
-  return {size, count, lastModified};
+  return {size, count, lastModified, skipped};
 }
 async function resolveDirHandle(sourceIndex, pathSegs){
   let dir = state.sources[sourceIndex].handle;
@@ -1384,8 +1416,18 @@ $("pickTargetBtn").addEventListener("click", async ()=>{
 document.querySelectorAll('input[name="dupRule"]').forEach(radio=>{
   radio.addEventListener("change", (e)=>{
     state.dupRule = e.target.value;
-    idbSet("settings", {dupRule: state.dupRule, mode: state.mode});
+    persistSettings();
   });
+});
+
+function persistSettings(){
+  idbSet("settings", {dupRule: state.dupRule, mode: state.mode, excludeText: $("excludeInput").value});
+}
+let excludeSaveTimer = null;
+$("excludeInput").addEventListener("input", (e)=>{
+  state.excludePatterns = e.target.value.split("\n").map(s=>s.trim().toLowerCase()).filter(Boolean);
+  clearTimeout(excludeSaveTimer);
+  excludeSaveTimer = setTimeout(persistSettings, 400);
 });
 
 $("modeToggle").addEventListener("change", (e)=>{
@@ -1393,7 +1435,7 @@ $("modeToggle").addEventListener("change", (e)=>{
   $("modeLabel").textContent = state.mode === "move" ? "Move" : "Copy";
   $("modeDesc").textContent = state.mode === "move" ? "Kept files are removed from the source after copying" : "Originals stay exactly where they are";
   $("moveWarning").classList.toggle("hidden", state.mode !== "move");
-  idbSet("settings", {dupRule: state.dupRule, mode: state.mode});
+  persistSettings();
 });
 
 async function checkOverlap(){
@@ -1441,13 +1483,49 @@ $("newScanBtn").addEventListener("click", async ()=>{
 /* ============================================================
    PHASE 1: CATALOG
    ============================================================ */
+function fmtDuration(sec){
+  sec = Math.max(0, sec);
+  if(sec < 8) return "a few seconds";
+  if(sec < 60) return Math.round(sec) + "s";
+  const totalMin = sec/60;
+  if(totalMin < 60){
+    const m = Math.floor(totalMin), s2 = Math.round((totalMin-m)*60);
+    return s2 ? `${m}m ${s2}s` : `${m}m`;
+  }
+  const h = Math.floor(sec/3600), m2 = Math.round((sec%3600)/60);
+  return m2 ? `${h}h ${m2}m` : `${h}h`;
+}
+// Rolling rate + ETA for a phase with a known total. Call reset() when the phase starts,
+// then tick(done,total) periodically; it settles for a few samples before showing a number,
+// since the first handful of files are a noisy basis for a whole-phase estimate.
+function makeProgressTimer(){
+  let start = 0;
+  return {
+    reset(){ start = Date.now(); },
+    tick(done, total, rateEl, etaEl, unit){
+      const elapsed = (Date.now()-start)/1000;
+      if(done < 8 || elapsed < 1){ rateEl.textContent = "Estimating…"; etaEl.textContent = ""; return; }
+      const rate = done/elapsed;
+      rateEl.textContent = `${fmtNum(Math.round(rate))} ${unit||"files"}/sec`;
+      if(total && total > done){
+        etaEl.textContent = `About ${fmtDuration((total-done)/rate)} left`;
+      } else {
+        etaEl.textContent = "";
+      }
+    }
+  };
+}
+const scanTimer = makeProgressTimer(), migrateTimer = makeProgressTimer();
+
 async function runScan(){
   state.cancelRequested = false;
   state.errors = [];
   state.catalog = [];
+  state.excludedCount = 0;
   state.scanStartedAt = Date.now();
-  log("Scan started");
-  setPhase("Cataloging files\u2026", true);
+  log("Scan started" + (state.excludePatterns.length ? ` (excluding: ${state.excludePatterns.join(", ")})` : ""));
+  setPhase("Cataloging files\u2026", true, 1);
+  scanTimer.reset();
 
   let count = 0, bytes = 0;
   outer:
@@ -1459,6 +1537,7 @@ async function runScan(){
         let info;
         try{ info = await measureDirectory(entry.handle); }
         catch(e){ state.errors.push(`Could not read bundle ${pathJoin(entry.pathSegs, entry.name)}`); continue; }
+        if(info.skipped) state.errors.push(`${info.skipped} file(s) inside bundle ${pathJoin(entry.pathSegs, entry.name)} couldn't be read (measured the rest)`);
         state.catalog.push({
           id: state.catalog.length,
           sourceIndex: entry.sourceIndex,
@@ -1477,12 +1556,18 @@ async function runScan(){
           $("statDataScanned").textContent = fmtBytes(bytes);
           $("scanCurrentPath").textContent = pathJoin(entry.pathSegs, entry.name);
           $("scanProgressText").textContent = `${fmtNum(count)} items cataloged`;
+          scanTimer.tick(count, 0, $("scanRate"), $("scanEta"), "items");
         }
         continue;
       }
       let file;
-      try{ file = await entry.handle.getFile(); }
-      catch(e){ state.errors.push(`Could not read ${pathJoin(entry.pathSegs, entry.name)}`); continue; }
+      try{ file = await withTimeout(entry.handle.getFile(), FILE_READ_TIMEOUT_MS, "getFile"); }
+      catch(e){
+        state.errors.push(isTimeoutError(e)
+          ? `Skipped after ${FILE_READ_TIMEOUT_MS/1000}s, still not readable (often a cloud file that hasn't downloaded yet): ${pathJoin(entry.pathSegs, entry.name)}`
+          : `Could not read ${pathJoin(entry.pathSegs, entry.name)}`);
+        continue;
+      }
       const ext = getExt(entry.name);
       state.catalog.push({
         id: state.catalog.length,
@@ -1500,9 +1585,10 @@ async function runScan(){
         $("statDataScanned").textContent = fmtBytes(bytes);
         $("scanCurrentPath").textContent = pathJoin(entry.pathSegs, entry.name);
         $("scanProgressText").textContent = `${fmtNum(count)} files cataloged`;
+        scanTimer.tick(count, 0, $("scanRate"), $("scanEta"), "files");
       }
       if(count % 300 === 0) await yieldToUI();
-      if(count % CATALOG_CHECKPOINT_EVERY === 0) await checkpointCatalog();
+      if(count % CATALOG_CHECKPOINT_EVERY === 0) await checkpointCatalog(false);
     }
   }
 
@@ -1514,23 +1600,27 @@ async function runScan(){
 
   $("statFilesFound").textContent = fmtNum(state.catalog.length);
   $("statDataScanned").textContent = fmtBytes(bytes);
-  await checkpointCatalog();
+  await checkpointCatalog(true);
   updateBrowseButtonVisibility();
-  log(`Cataloged ${state.catalog.length} files (${fmtBytes(bytes)})`);
+  log(`Cataloged ${state.catalog.length} files (${fmtBytes(bytes)})` + (state.excludedCount ? ` \u2014 ${state.excludedCount} skipped by your exclude list` : ""));
 
   await runHashPhases();
 }
 
-async function checkpointCatalog(){
+async function checkpointCatalog(final){
   await idbSet("catalog", state.catalog);
-  await idbSet("stage", "catalog-done");
+  // "catalog-partial": a mid-scan checkpoint — cataloging was NOT finished, folders after this point
+  // (and whatever file it was stuck on) were never reached. Resuming from this must re-catalog, never
+  // jump straight to hashing, or files after the checkpoint would silently vanish from the result.
+  // "catalog-done": the walk actually finished. Only this stage is safe to resume into hashing.
+  await idbSet("stage", final ? "catalog-done" : "catalog-partial");
 }
 
 /* ============================================================
    PHASE 2-4: SIZE GROUPING + TIERED HASHING
    ============================================================ */
 async function runHashPhases(){
-  setPhase("Comparing file sizes\u2026", true);
+  setPhase("Comparing file sizes\u2026", true, 2);
   await yieldToUI();
 
   const bySize = new Map();
@@ -1554,7 +1644,8 @@ async function runHashPhases(){
   const pool = new HashPool(poolSize);
 
   try{
-    setPhase("Fingerprinting candidates\u2026", false);
+    setPhase("Fingerprinting candidates\u2026", false, 3);
+    scanTimer.reset();
     await hashRound(sizeCandidates, "partial", pool);
     if(state.cancelRequested){ pool.terminate(); goToStep(1); return; }
 
@@ -1568,7 +1659,8 @@ async function runHashPhases(){
     let fullCandidates = [];
     for(const [, group] of byPartial){ if(group.length > 1) fullCandidates.push(...group); }
 
-    setPhase("Confirming exact matches\u2026", false);
+    setPhase("Confirming exact matches\u2026", false, 4);
+    scanTimer.reset();
     await hashRound(fullCandidates, "full", pool);
     if(state.cancelRequested){ pool.terminate(); goToStep(1); return; }
 
@@ -1599,20 +1691,27 @@ async function hashRound(items, mode, pool){
     while(idx < items.length){
       if(state.cancelRequested) return;
       const item = items[idx++];
+      const hashTimeout = mode === "partial" ? FILE_READ_TIMEOUT_MS : FULL_HASH_TIMEOUT_MS;
       try{
-        const handle = await resolveFileHandle(item);
-        const file = await handle.getFile();
-        const hash = await pool.hash(file, mode);
+        const handle = await withTimeout(resolveFileHandle(item), FILE_READ_TIMEOUT_MS, "resolve");
+        const file = await withTimeout(handle.getFile(), FILE_READ_TIMEOUT_MS, "getFile");
+        const hash = await withTimeout(pool.hash(file, mode), hashTimeout, "hash");
         if(mode === "partial") item.partialHash = hash; else item.fullHash = hash;
       }catch(e){
-        state.errors.push(`Could not hash ${pathJoin(item.pathSegs, item.name)}`);
+        // Treated as "not a duplicate" rather than dropped: it's excluded from this round's matching,
+        // never mistakenly merged into a group, and still gets organized normally later.
+        state.errors.push(isTimeoutError(e)
+          ? `Timed out fingerprinting (skipped, kept as unique): ${pathJoin(item.pathSegs, item.name)}`
+          : `Could not hash ${pathJoin(item.pathSegs, item.name)}`);
         if(mode === "partial") item.partialHash = "error_"+item.id; else item.fullHash = "error_"+item.id;
       }
       done++;
       if(done % 10 === 0){
         $("scanProgressText").textContent = `${fmtNum(done)} of ${fmtNum(total)} files`;
         $("scanProgressPct").textContent = total ? Math.round(done/total*100)+"%" : "";
+        $("scanProgressFill").style.width = total ? (done/total*100)+"%" : "0%";
         $("scanCurrentPath").textContent = pathJoin(item.pathSegs, item.name);
+        scanTimer.tick(done, total, $("scanRate"), $("scanEta"), "files");
       }
       if(done % 200 === 0) await yieldToUI();
     }
@@ -1644,10 +1743,14 @@ function computeDefaultChoice(files){
   return best;
 }
 
-function setPhase(text, indeterminate){
+function setPhase(text, indeterminate, step){
   $("phaseText").textContent = text;
+  if(step) $("phaseStep").textContent = `Step ${step} of 4`;
   $("scanProgressFill").classList.toggle("indeterminate", !!indeterminate);
+  $("scanProgressFill").style.width = indeterminate ? "" : "0%";
   if(indeterminate){ $("scanProgressPct").textContent = ""; }
+  $("scanRate").textContent = "\u00a0";
+  $("scanEta").textContent = "";
 }
 
 $("cancelScanBtn").addEventListener("click", ()=>{
@@ -2191,6 +2294,8 @@ async function runMigration(){
   let done = 0, bytesDone = 0;
   const migrateErrors = [];
   const dirCache = new Map();
+  migrateTimer.reset();
+  $("migrateRate").textContent = "\u00a0"; $("migrateEta").textContent = "";
 
   async function catDir(cat){
     if(dirCache.has(cat)) return dirCache.get(cat);
@@ -2257,6 +2362,7 @@ async function runMigration(){
       $("migrateProgressPct").textContent = total ? Math.round(done/total*100)+"%" : "0%";
       $("migrateProgressFill").style.width = total ? (done/total*100)+"%" : "0%";
       $("migrateCurrentPath").textContent = pathJoin(item.pathSegs, item.name);
+      migrateTimer.tick(done, total, $("migrateRate"), $("migrateEta"), "items");
     }
     if(done % 150 === 0) await yieldToUI();
   }
@@ -2381,6 +2487,7 @@ async function tryLoadResumeState(){
 
   $("resumeBanner").classList.remove("hidden");
   let detail = "Your saved folders are ready to restore.";
+  if(stage === "catalog-partial") detail = `A previous scan was interrupted partway (after cataloging ${(catalog||[]).length} files) \u2014 restore access to pick your folders back up and scan again.`;
   if(stage === "catalog-done") detail = `A previous scan cataloged ${(catalog||[]).length} files \u2014 restore access to pick up where you left off.`;
   if(stage === "hash-done") detail = `A previous scan found ${(dupGroupsRaw||[]).length} duplicate group(s) \u2014 restore access to review them.`;
   $("resumeDetail").textContent = detail;
@@ -2399,7 +2506,12 @@ async function tryLoadResumeState(){
       if(!(await verifyPermission(targetHandle.handle, "readwrite"))) ok = false;
       state.target = targetHandle;
     }
-    if(settings){ state.dupRule = settings.dupRule || "newest"; state.mode = settings.mode || "copy"; syncSettingsUI(); }
+    if(settings){
+      state.dupRule = settings.dupRule || "newest"; state.mode = settings.mode || "copy";
+      $("excludeInput").value = settings.excludeText || "";
+      state.excludePatterns = (settings.excludeText||"").split("\n").map(s=>s.trim().toLowerCase()).filter(Boolean);
+      syncSettingsUI();
+    }
 
     renderSources(); renderTarget(); updateBeginScanEnabled();
     $("resumeBanner").classList.add("hidden");
@@ -2427,6 +2539,10 @@ async function tryLoadResumeState(){
       goToStep(2);
       runHashPhases();
     }
+    // stage === "catalog-partial": folders/target/settings are restored above, but the previous
+    // catalog was incomplete, so we deliberately stay on step 1 rather than resuming into hashing
+    // with a partial (and silently truncated) file list. Pressing "Begin scan" starts a fresh,
+    // complete walk — now protected by the same per-file timeout and any exclude rules below.
   };
   $("resumeDiscardBtn").onclick = async ()=>{
     await idbClearAll();
