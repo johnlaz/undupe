@@ -48,6 +48,7 @@
     --success:#34d399; --success-rgb:52,211,153;
     --hero-grad:linear-gradient(135deg,#a855f7 0%,#e11d48 100%); --hero-rgb:225,29,72;
     --grad-text:linear-gradient(92deg,#c084fc 0%,#f472b6 55%,#7dd3fc 100%);
+    --bar-grad:linear-gradient(90deg,#a855f7 0%,#ec4899 55%,#38bdf8 100%);
     --glass:linear-gradient(150deg,rgba(255,255,255,0.085) 0%,rgba(255,255,255,0.028) 100%);
     --glass-strong:linear-gradient(150deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.05) 100%);
     --glass-edge:rgba(255,255,255,0.11); --glass-edge-hi:rgba(255,255,255,0.24);
@@ -75,6 +76,7 @@
     --success:#059669; --success-rgb:5,150,105;
     --hero-grad:linear-gradient(135deg,#9333ea 0%,#e11d48 100%);
     --grad-text:linear-gradient(92deg,#7e22ce 0%,#db2777 55%,#0369a1 100%);
+    --bar-grad:linear-gradient(90deg,#9333ea 0%,#db2777 55%,#0ea5e9 100%);
     --glass:linear-gradient(150deg,rgba(255,255,255,0.8) 0%,rgba(255,255,255,0.48) 100%);
     --glass-strong:linear-gradient(150deg,rgba(255,255,255,0.96) 0%,rgba(255,255,255,0.72) 100%);
     --glass-edge:rgba(21,30,49,0.09); --glass-edge-hi:rgba(21,30,49,0.2);
@@ -105,7 +107,7 @@
     -webkit-mask-image:radial-gradient(ellipse 85% 60% at 50% 18%,#000 10%,transparent 75%);
             mask-image:radial-gradient(ellipse 85% 60% at 50% 18%,#000 10%,transparent 75%);
   }
-  h1,h2,h3{font-family:'Playfair Display',Georgia,serif;font-weight:700;line-height:1.12;margin:0;letter-spacing:-0.01em;}
+  h1,h2,h3{font-family:'Playfair Display',Georgia,serif;font-weight:700;line-height:1.12;margin:0;letter-spacing:-0.01em;text-wrap:balance;}
   p{margin:0;}
   a{color:var(--accent-bright);}
   img{max-width:100%;height:auto;}
@@ -329,12 +331,77 @@
   .foot nav a:hover{color:var(--text-hi);}
   .foot small{width:100%;color:var(--text-low);font-size:0.85rem;}
 
+  /* try-it demo */
+  .try{display:grid;grid-template-columns:1fr 1.25fr;gap:52px;align-items:center;}
+  .try h2{font-size:clamp(2rem,4vw,3rem);}
+  .try .txt p{margin-top:18px;font-size:1.1rem;color:var(--text-mid);}
+  .rules{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px;}
+  .rule{font:500 0.95rem 'DM Sans',sans-serif;padding:10px 18px;border-radius:999px;cursor:pointer;color:var(--text-mid);background:var(--glass);border:1px solid var(--glass-edge);transition:all .15s;}
+  .rule:hover{color:var(--text-hi);}
+  .rule[aria-pressed="true"]{color:#fff;border-color:rgba(255,255,255,0.3);background:linear-gradient(135deg,var(--accent),var(--accent-deep));box-shadow:0 12px 26px -12px rgba(var(--accent-rgb),0.85);}
+  .demo{padding:26px;}
+  .demo-head{font:500 0.8rem ui-monospace,'Cascadia Mono',Consolas,monospace;color:var(--text-low);margin-bottom:14px;padding-right:78px;}
+  .copy-row{display:flex;align-items:center;gap:14px;padding:12px 14px;margin-bottom:6px;border-radius:14px;border:1px solid transparent;cursor:pointer;transition:background .12s,border-color .12s;}
+  .copy-row:hover{background:var(--hover-surface);}
+  .copy-row.chosen{border-color:rgba(var(--success-rgb),0.45);background:rgba(var(--success-rgb),0.09);}
+  .copy-row input{accent-color:var(--success);width:17px;height:17px;flex-shrink:0;margin:0;}
+  .copy-thumb{width:42px;height:42px;border-radius:10px;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18);opacity:0.55;transition:opacity .15s;}
+  .copy-row.chosen .copy-thumb{opacity:1;}
+  .copy-info{flex:1;min-width:0;display:block;}
+  .copy-name{display:block;font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .copy-meta{display:block;font-size:0.76rem;color:var(--text-low);margin-top:1px;}
+  .tag{font-size:0.72rem;font-weight:600;padding:3px 11px;border-radius:999px;flex-shrink:0;}
+  .tag.keep{background:rgba(var(--success-rgb),0.16);color:var(--success);border:1px solid rgba(var(--success-rgb),0.4);}
+  .tag.skip{background:var(--recess);color:var(--text-low);border:1px solid var(--hairline);}
+  .demo-foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px 18px;margin-top:14px;padding-top:16px;border-top:1px solid var(--hairline);font-size:0.86rem;color:var(--text-mid);}
+  .demo-foot b{color:var(--text-hi);font-weight:600;}
+  @media (max-width:900px){ .try{grid-template-columns:1fr;gap:34px;} }
+
+  /* estimator */
+  .est{padding:clamp(24px,4.5vw,52px);}
+  .est-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:stretch;}
+  .slider-card{padding:20px 22px;margin-bottom:14px;border-radius:18px;background:var(--recess);border:1px solid var(--hairline);}
+  .slider-card:last-child{margin-bottom:0;}
+  .slider-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:16px;}
+  .slider-top label{font-weight:500;}
+  .slider-top output{font:700 1.2rem 'Playfair Display',serif;text-align:right;white-space:nowrap;}
+  .v1{color:var(--accent-bright);} .v2{color:var(--accent2-bright);} .v3{color:var(--success);}
+  .ticks{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:0.75rem;color:var(--text-low);}
+  input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:24px;margin:0;background:transparent;cursor:pointer;--p:0%;}
+  input[type=range]:focus{outline:none;}
+  input[type=range]:focus-visible{outline:2px solid var(--accent-bright);outline-offset:4px;border-radius:12px;}
+  input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:999px;border:1px solid var(--glass-edge);
+    background:linear-gradient(90deg,var(--accent) var(--p),var(--recess) var(--p));}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;height:24px;width:24px;margin-top:-9px;border-radius:50%;border:3px solid #fff;
+    background:linear-gradient(135deg,var(--accent),var(--accent-bright));box-shadow:0 0 0 0 rgba(var(--accent-rgb),0.4),0 4px 14px rgba(var(--accent-rgb),0.7);transition:box-shadow .15s;}
+  input[type=range]:hover::-webkit-slider-thumb,input[type=range]:active::-webkit-slider-thumb{box-shadow:0 0 0 7px rgba(var(--accent-rgb),0.2),0 4px 14px rgba(var(--accent-rgb),0.7);}
+  input[type=range]::-moz-range-track{height:8px;border-radius:999px;border:1px solid var(--glass-edge);background:var(--recess);}
+  input[type=range]::-moz-range-progress{height:8px;border-radius:999px;background:var(--accent);}
+  input[type=range]::-moz-range-thumb{height:20px;width:20px;border-radius:50%;border:3px solid #fff;background:linear-gradient(135deg,var(--accent),var(--accent-bright));box-shadow:0 4px 14px rgba(var(--accent-rgb),0.7);}
+  .result{display:flex;flex-direction:column;gap:24px;padding:30px;border-radius:22px;
+    background:linear-gradient(150deg,rgba(var(--accent-rgb),0.17),rgba(var(--accent2-rgb),0.07));border:1px solid rgba(var(--accent-rgb),0.34);box-shadow:var(--inset-hi);}
+  .r-label{font-size:0.78rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-low);}
+  .result .big{font:700 clamp(2.6rem,5vw,3.7rem)/1.05 'Playfair Display',serif;margin-top:8px;}
+  .r-sub{margin-top:10px;font-size:0.9rem;color:var(--text-mid);}
+  .split{height:14px;border-radius:999px;background:var(--recess);overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.3);}
+  .split i{display:block;height:100%;border-radius:999px;background:var(--bar-grad);box-shadow:0 0 16px rgba(var(--accent-rgb),0.6);transition:width .4s cubic-bezier(.2,.8,.2,1);}
+  .split-legend{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:0.82rem;color:var(--text-mid);}
+  .split-legend span{white-space:nowrap;}
+  .split-legend em{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;}
+  .split-legend .k1{background:var(--text-low);opacity:0.5;} .split-legend .k2{background:var(--accent);}
+  .split-legend b{color:var(--text-hi);font-weight:600;margin-left:4px;}
+  .mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-top:22px;border-top:1px solid var(--hairline);}
+  .mini-stats b{display:block;margin-top:6px;font:700 1.55rem 'Playfair Display',serif;}
+  #estHours{color:var(--accent2-bright);} #estValue{color:var(--success);}
+  .fine{margin-top:22px;font-size:0.8rem;color:var(--text-low);}
+  @media (max-width:900px){ .est-grid{grid-template-columns:1fr;} }
+
   /* reveal on scroll (only when JS is running) */
   .js .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease;}
   .js .reveal.in{opacity:1;transform:none;}
   @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} .js .reveal{opacity:1;transform:none;transition:none;} .btn,.tab{transition:none;} }
   /* keep last: the `font:` shorthand above would otherwise reset these */
-  h1,h2,h3,.fact b,.privacy .zero,.step .num{font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1;}
+  h1,h2,h3,.fact b,.privacy .zero,.step .num,.slider-top output,.result .big,.mini-stats b{font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1;}
   @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){ .card,.nav,.frame,.float,.btn,.eyebrow{background:var(--panel-solid);} }
 </style>
 </head>
@@ -377,6 +444,7 @@
     <nav class="nav-links" aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
+      <a href="#estimator">Estimator</a>
       <a href="#trust">Safety</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -443,6 +511,46 @@
       <div class="step reveal"><div class="num">2</div><h3>Scan</h3><p>Undupe catalogs everything, then fingerprints only the files that could possibly match. Close the tab and resume later.</p></div>
       <div class="step reveal"><div class="num">3</div><h3>Review</h3><p>See every duplicate group with real thumbnails. Newest wins by default, and any decision is one click to change.</p></div>
       <div class="step reveal"><div class="num">4</div><h3>Organize</h3><p>Files land in a clean folder sorted into Photos, Videos, Documents, Audio and more. Copy or move, your call.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="try">
+  <div class="container try">
+    <div class="txt reveal">
+      <span class="kicker">Try it</span>
+      <h2>You decide which copy <span class="grad-text">survives.</span></h2>
+      <p>Undupe groups identical files and picks a winner using the rule you choose. Change any decision in a click. This is the same control you get in the app, so go ahead and play with it.</p>
+      <div class="rules" role="group" aria-label="Which copy to keep">
+        <button type="button" class="rule" data-rule="newest" aria-pressed="true">Keep newest</button>
+        <button type="button" class="rule" data-rule="oldest" aria-pressed="false">Keep oldest</button>
+        <button type="button" class="rule" data-rule="manual" aria-pressed="false">I'll choose</button>
+      </div>
+    </div>
+    <div class="card demo reveal">
+      <span class="example-tag">Example</span>
+      <div class="demo-head">Group 1 &middot; 3 identical copies &middot; 1.4 GB each</div>
+      <div role="radiogroup" aria-label="Choose the copy to keep">
+        <label class="copy-row" data-date="2023-09-14" data-name="External_Drive_2023/Photos/RAW_0492.CR2">
+          <input type="radio" name="demoCopy">
+          <span class="copy-thumb" style="background:linear-gradient(135deg,#f472b6,#6366f1)"></span>
+          <span class="copy-info"><span class="copy-name">External_Drive_2023/Photos/RAW_0492.CR2</span><span class="copy-meta">Modified Sep 14, 2023</span></span>
+          <span class="tag skip">Skip</span>
+        </label>
+        <label class="copy-row" data-date="2021-08-02" data-name="Old_Laptop_Backup/Desktop/RAW_0492 (Copy).CR2">
+          <input type="radio" name="demoCopy">
+          <span class="copy-thumb" style="background:linear-gradient(135deg,#f472b6,#6366f1)"></span>
+          <span class="copy-info"><span class="copy-name">Old_Laptop_Backup/Desktop/RAW_0492 (Copy).CR2</span><span class="copy-meta">Modified Aug 2, 2021</span></span>
+          <span class="tag skip">Skip</span>
+        </label>
+        <label class="copy-row" data-date="2019-06-10" data-name="USB_Backup_2019/DCIM/100CANON/RAW_0492.CR2">
+          <input type="radio" name="demoCopy">
+          <span class="copy-thumb" style="background:linear-gradient(135deg,#f472b6,#6366f1)"></span>
+          <span class="copy-info"><span class="copy-name">USB_Backup_2019/DCIM/100CANON/RAW_0492.CR2</span><span class="copy-meta">Modified Jun 10, 2019</span></span>
+          <span class="tag skip">Skip</span>
+        </label>
+      </div>
+      <div class="demo-foot" aria-live="polite"><span>Keeping <b id="demoKeep">&hellip;</b></span><span>2 copies skipped &middot; 2.8 GB not carried over</span></div>
     </div>
   </div>
 </section>
@@ -574,6 +682,57 @@
   </div>
 </section>
 
+<section class="section" id="estimator">
+  <div class="container">
+    <div class="card est reveal">
+      <div class="section-head" style="text-align:left;margin:0 0 34px;max-width:680px;">
+        <span class="kicker">Savings estimator</span>
+        <h2>See what a cleanup could free up.</h2>
+        <p>Slide to match your archive. It's an illustration built from your own guesses, so try a few values.</p>
+      </div>
+      <div class="est-grid">
+        <div class="est-controls">
+          <div class="slider-card">
+            <div class="slider-top"><label for="estDrive">Total archive size</label><output id="estDriveOut" for="estDrive" class="v1">1 TB (1,000 GB)</output></div>
+            <input type="range" id="estDrive" min="100" max="10000" step="100" value="1000">
+            <div class="ticks" aria-hidden="true"><span>100 GB</span><span>2.5 TB</span><span>5 TB</span><span>10 TB</span></div>
+          </div>
+          <div class="slider-card">
+            <div class="slider-top"><label for="estRatio">Estimated duplicate share</label><output id="estRatioOut" for="estRatio" class="v2">35%</output></div>
+            <input type="range" id="estRatio" min="10" max="75" step="5" value="35">
+            <div class="ticks" aria-hidden="true"><span>10% light</span><span>35% moderate</span><span>75% heavy</span></div>
+          </div>
+          <div class="slider-card">
+            <div class="slider-top"><label for="estRate">What your time is worth</label><output id="estRateOut" for="estRate" class="v3">$35 / hr</output></div>
+            <input type="range" id="estRate" min="15" max="150" step="5" value="35">
+            <div class="ticks" aria-hidden="true"><span>$15</span><span>$50</span><span>$100</span><span>$150</span></div>
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <div>
+            <div class="r-label">Estimated duplicate data</div>
+            <div class="big grad-text" id="estBig">350 GB</div>
+            <div class="r-sub" id="estBigSub">Data you could stop keeping once only the clean copy remains.</div>
+          </div>
+          <div>
+            <div class="split" aria-hidden="true"><i id="estBar" style="width:35%"></i></div>
+            <div class="split-legend"><span><em class="k1"></em>Unique <b id="estUnique">650 GB</b></span><span><em class="k2"></em>Duplicate <b id="estDup">350 GB</b></span></div>
+          </div>
+          <div class="mini-stats">
+            <div><div class="r-label">Manual review avoided</div><b id="estHours">29.2 hrs</b></div>
+            <div><div class="r-label">Value of that time</div><b id="estValue">$1,022</b></div>
+          </div>
+          <div class="cta-row" style="margin-top:0;justify-content:flex-start;">
+            <a class="btn btn-primary btn-sm" href="app/">Launch Undupe <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a class="btn btn-sm" href="app/index.html" download="undupe.html" data-download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 21h14"/></svg> Download app</a>
+          </div>
+        </div>
+      </div>
+      <p class="fine">An illustration, not a promise: real results depend entirely on your files. The time estimate assumes about 12 GB of files reviewed by hand per hour.</p>
+    </div>
+  </div>
+</section>
+
 <section class="section" id="trust">
   <div class="container trust">
     <div class="txt reveal">
@@ -663,7 +822,7 @@
   <path d="M 40 350 L 58 368 L 92 330" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </svg><svg class="wm" viewBox="40 -714 4022 727" role="img" aria-label="Undupe" focusable="false"><path class="wm-un" d="M267 -708V-309Q267 -260 288.5 -231.5Q310 -203 358 -203Q406 -203 429 -231.5Q452 -260 452 -309V-708H673V-309Q673 -208 631 -136.5Q589 -65 516 -29Q443 7 353 7Q263 7 193.5 -29Q124 -65 85 -136Q46 -207 46 -309V-708ZM1433 0H1211L976 -356V0H754V-708H976L1211 -346V-708H1433Z"/><path fill="url(#wm-grad)" d="M2181 -356Q2181 -255 2136 -174Q2091 -93 2007.5 -46.5Q1924 0 1813 0H1518V-708H1813Q1924 -708 2007.5 -663Q2091 -618 2136 -538Q2181 -458 2181 -356ZM1956 -356Q1956 -432 1912 -473Q1868 -514 1793 -514H1740V-198H1793Q1868 -198 1912 -239Q1956 -280 1956 -356ZM2463 -708V-309Q2463 -260 2484.5 -231.5Q2506 -203 2554 -203Q2602 -203 2625 -231.5Q2648 -260 2648 -309V-708H2869V-309Q2869 -208 2827 -136.5Q2785 -65 2712 -29Q2639 7 2549 7Q2459 7 2389.5 -29Q2320 -65 2281 -136Q2242 -207 2242 -309V-708ZM3260 -225H3172V0H2950V-708H3260Q3390 -708 3459.5 -642Q3529 -576 3529 -465Q3529 -398 3498 -343.5Q3467 -289 3406.5 -257Q3346 -225 3260 -225ZM3304 -465Q3304 -530 3235 -530H3172V-400H3235Q3304 -400 3304 -465ZM3806 -531V-444H4026V-277H3806V-177H4056V0H3584V-708H4056V-531Z"/></svg></a>
-    <nav aria-label="Footer"><a href="app/">Launch app</a><a href="app/index.html" download="undupe.html" data-download>Download</a><a href="#how">How it works</a><a href="#trust">Safety</a><a href="#faq">FAQ</a></nav>
+    <nav aria-label="Footer"><a href="app/">Launch app</a><a href="app/index.html" download="undupe.html" data-download>Download</a><a href="#how">How it works</a><a href="#estimator">Estimator</a><a href="#trust">Safety</a><a href="#faq">FAQ</a></nav>
     <small>Made by LAZLAB Creations</small>
   </div>
 </footer>
@@ -697,6 +856,54 @@
     t.addEventListener('click',function(){ select(t.id.slice(2)); });
     t.addEventListener('keydown',function(e){ var n=null; if(e.key==='ArrowRight')n=tabs[(i+1)%tabs.length]; if(e.key==='ArrowLeft')n=tabs[(i-1+tabs.length)%tabs.length];
       if(n){ e.preventDefault(); n.focus(); select(n.id.slice(2)); } }); });
+  /* try-it demo: choose which copy survives */
+  (function(){
+    var rows=[].slice.call(document.querySelectorAll('.copy-row')); if(!rows.length) return;
+    var rules=[].slice.call(document.querySelectorAll('.rule')), keepEl=$('#demoKeep');
+    var when=rows.map(function(r){ return Date.parse(r.getAttribute('data-date')); });
+    function choose(i){ rows.forEach(function(r,k){ var on=k===i; r.classList.toggle('chosen',on); r.querySelector('input').checked=on;
+        var t=r.querySelector('.tag'); t.textContent=on?'Keep':'Skip'; t.className='tag '+(on?'keep':'skip'); });
+      keepEl.textContent=rows[i].getAttribute('data-name'); }
+    function setRule(name){ rules.forEach(function(b){ b.setAttribute('aria-pressed',String(b.getAttribute('data-rule')===name)); });
+      if(name==='newest') choose(when.indexOf(Math.max.apply(null,when)));
+      else if(name==='oldest') choose(when.indexOf(Math.min.apply(null,when))); }
+    rules.forEach(function(b){ b.addEventListener('click',function(){ setRule(b.getAttribute('data-rule')); }); });
+    rows.forEach(function(r,i){ r.querySelector('input').addEventListener('change',function(){ choose(i); setRule('manual'); }); });
+    setRule('newest');
+  })();
+
+  /* savings estimator */
+  (function(){
+    var drive=$('#estDrive'), ratio=$('#estRatio'), rate=$('#estRate'); if(!drive) return;
+    var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var out={big:$('#estBig'),sub:$('#estBigSub'),bar:$('#estBar'),uniq:$('#estUnique'),dup:$('#estDup'),hrs:$('#estHours'),val:$('#estValue')};
+    var shown={gb:350,hrs:29.2,val:1022};
+    function fmtGB(g){ return g>=1000 ? (g/1000).toFixed(1)+' TB' : Math.round(g).toLocaleString()+' GB'; }
+    function tween(key,to,write){
+      var from=shown[key]; if(reduce||from===to){ shown[key]=to; write(to); return; }
+      var t0=performance.now(), dur=380; cancelAnimationFrame(tween['r'+key]); clearTimeout(tween['t'+key]);
+      (function step(now){ var k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3), v=from+(to-from)*e; write(v); shown[key]=v;
+        if(k<1) tween['r'+key]=requestAnimationFrame(step); else { shown[key]=to; write(to); } })(t0);
+      /* guarantee the exact final value even if the browser pauses animation frames (e.g. a background tab) */
+      tween['t'+key]=setTimeout(function(){ cancelAnimationFrame(tween['r'+key]); shown[key]=to; write(to); },dur+60);
+    }
+    function fill(el){ var min=+el.min,max=+el.max; el.style.setProperty('--p',((el.value-min)/(max-min)*100)+'%'); }
+    function update(){
+      var gb=+drive.value, pct=+ratio.value, hr=+rate.value;
+      $('#estDriveOut').textContent = gb>=1000 ? (gb/1000).toFixed(gb%1000===0?0:1)+' TB ('+gb.toLocaleString()+' GB)' : gb+' GB';
+      $('#estRatioOut').textContent = pct+'%'; $('#estRateOut').textContent = '$'+hr+' / hr';
+      [drive,ratio,rate].forEach(fill);
+      var dupGB=Math.round(gb*pct/100), hours=+(dupGB/12).toFixed(1), value=Math.round(hours*hr);
+      tween('gb',dupGB,function(v){ out.big.textContent=fmtGB(v); });
+      tween('hrs',hours,function(v){ out.hrs.textContent=v.toFixed(1)+' hrs'; });
+      tween('val',value,function(v){ out.val.textContent='$'+Math.round(v).toLocaleString(); });
+      out.sub.textContent = dupGB>=1000 ? dupGB.toLocaleString()+' GB you could stop keeping once only the clean copy remains.' : 'Data you could stop keeping once only the clean copy remains.';
+      out.bar.style.width=pct+'%'; out.uniq.textContent=fmtGB(gb-dupGB); out.dup.textContent=fmtGB(dupGB);
+    }
+    [drive,ratio,rate].forEach(function(el){ el.addEventListener('input',update); });
+    update();
+  })();
+
   /* download: build a self-contained copy of the app (fonts embedded) so it runs from a local file */
   function toDataUrl(blob){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){res(r.result);}; r.onerror=rej; r.readAsDataURL(blob); }); }
   function save(blob,name){ var u=URL.createObjectURL(blob), a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},4000); }
