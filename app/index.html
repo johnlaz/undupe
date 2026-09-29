@@ -291,6 +291,11 @@
   .folder-row .folder-name{flex-grow:1;font-size:0.86rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .folder-row .remove-btn{background:none;border:none;color:var(--text-low);cursor:pointer;padding:4px;border-radius:6px;flex-shrink:0;}
   .folder-row .remove-btn:hover{color:var(--danger-bright);background:rgba(var(--danger-rgb),0.12);}
+  .archive-open-row{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 14px;
+    margin-bottom:26px;padding:13px 16px;border-radius:var(--radius-sm);
+    background:var(--recess);border:1px solid var(--border-glass);font-size:0.85rem;color:var(--text-mid);
+  }
   .empty-folder-hint{
     border:1px dashed var(--border-glass-hi);border-radius:var(--radius-sm);
     padding:18px;text-align:center;color:var(--text-low);font-size:0.85rem;margin-bottom:8px;
@@ -410,11 +415,15 @@
   .clone-meta{font-size:0.76rem;color:var(--text-low);margin:4px 0 12px;}
   .clone-actions{display:flex;gap:8px;flex-wrap:wrap;}
   .dup-thumb{
-    width:44px;height:44px;border-radius:9px;flex-shrink:0;overflow:hidden;
+    position:relative;width:44px;height:44px;border-radius:9px;flex-shrink:0;overflow:hidden;
     background:var(--recess);border:1px solid var(--border-glass);
     display:flex;align-items:center;justify-content:center;color:var(--text-low);
   }
   .dup-thumb img,.dup-thumb video{width:100%;height:100%;object-fit:cover;}
+  /* the real thumbnail sits over the icon and only fades in once it has an actual frame to show —
+     this is what stops a video from flashing solid black while it's still seeking */
+  .thumb-media{position:absolute;inset:0;opacity:0;transition:opacity .25s ease;}
+  .thumb-media.in{opacity:1;}
 
   /* ---------- insights ---------- */
   .insight-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:0.82rem;}
@@ -642,6 +651,11 @@
           <h2 class="serif">Where should we look?</h2>
           <p class="sub">Add one or more folders to scan &mdash; your backup drives, exports, whatever's grown out of control. Nothing is touched until you approve the final migration.</p>
 
+          <div class="archive-open-row">
+            <span>Already organized this archive with Undupe before?</span>
+            <button id="openArchiveBtn" class="btn btn-ghost btn-sm">Open &amp; browse it</button>
+          </div>
+
           <div class="section-label">Source folders</div>
           <div id="sourceList"></div>
           <div id="sourceEmptyHint" class="empty-folder-hint">No source folders added yet</div>
@@ -730,7 +744,7 @@
 
           <div class="footer-row split">
             <button id="cancelScanBtn" class="btn btn-danger btn-sm">Cancel scan</button>
-            <span style="font-size:0.78rem;color:var(--text-low);align-self:center;">Checkpoints save every 2,500 files, in case you need to close the tab</span>
+            <span id="scanFooterNote" style="font-size:0.78rem;color:var(--text-low);align-self:center;">Checkpoints save every 2,500 files, in case you need to close the tab</span>
           </div>
         </div>
       </section>
@@ -844,7 +858,7 @@
       </div>
     </div>
     <div class="browse-controls">
-      <input type="text" id="browseSearchInput" class="bare" placeholder="Search by name or path\u2026">
+      <input type="text" id="browseSearchInput" class="bare" placeholder="Search by name or path…">
       <select id="browseCategoryFilter" class="bare">
         <option value="">All types</option>
         <option value="Photos">Photos</option>
@@ -855,8 +869,8 @@
         <option value="Other">Other</option>
       </select>
       <select id="browseSortSelect" class="bare">
-        <option value="name-asc">Name (A\u2013Z)</option>
-        <option value="name-desc">Name (Z\u2013A)</option>
+        <option value="name-asc">Name (A–Z)</option>
+        <option value="name-desc">Name (Z–A)</option>
         <option value="size-desc">Size (largest)</option>
         <option value="size-asc">Size (smallest)</option>
         <option value="date-desc">Date (newest)</option>
@@ -865,6 +879,7 @@
         <option value="taken-asc">Date taken (oldest)</option>
       </select>
     </div>
+    <div id="archiveStatusNote" class="bundle-note hidden" style="margin-bottom:14px;"></div>
     <div class="browse-meta" id="browseMeta"></div>
     <div class="browse-table-wrap"><div id="browseTableBody"></div></div>
     <div class="browse-pagination">
@@ -909,7 +924,8 @@ function isBundleDir(name){
 }
 const CATALOG_CHECKPOINT_EVERY = 2500;
 const FILE_READ_TIMEOUT_MS = 25000;   // cataloging + partial hashing: metadata/small reads should never take this long
-const FULL_HASH_TIMEOUT_MS = 180000;  // full hashing: large legitimate files (multi-GB video) need real headroom
+const FULL_HASH_TIMEOUT_MS = 180000;
+const CATALOG_FILE_NAME = "undupe-catalog.json"; // sidecar manifest written to the output folder after organizing  // full hashing: large legitimate files (multi-GB video) need real headroom
 function withTimeout(promise, ms, label){
   let timer;
   const timeout = new Promise((_,reject)=>{ timer = setTimeout(()=>reject(new Error("timeout:"+(label||""))), ms); });
@@ -1056,6 +1072,8 @@ const state = {
   errors: [],
   sessionLog: [],
   thumbUrls: [],
+  thumbCache: new Map(), // item.id -> {url, kind}, so re-rendering (search/sort/page) doesn't re-read files from disk
+  thumbPending: new Map(), // elementId -> item, for thumbnails not yet scrolled into view
   clones: [],
   excludePatterns: [],
   exifCache: new Map(),
@@ -1518,6 +1536,7 @@ function makeProgressTimer(){
 const scanTimer = makeProgressTimer(), migrateTimer = makeProgressTimer();
 
 async function runScan(){
+  $("scanFooterNote").textContent = "Checkpoints save every 2,500 files, in case you need to close the tab";
   state.cancelRequested = false;
   state.errors = [];
   state.catalog = [];
@@ -1807,7 +1826,10 @@ function renderMoreDupGroups(){
         </div>
         ${fi===group.chosenIndex ? '<span class="keep-tag">Keep</span>' : '<span class="skip-tag">Skip</span>'}
       `;
-      if(f.category === "Photos" || f.category === "Videos") loadThumb(f);
+      if(!f.isBundle && (f.category === "Photos" || f.category === "Videos")){
+        if(!dupThumbObserver && typeof IntersectionObserver !== "undefined") dupThumbObserver = makeThumbObserver(null);
+        queueThumb(f, "thumb-"+f.id, dupThumbObserver);
+      }
       row.querySelector("input").addEventListener("change", ()=>{
         group.chosenIndex = fi;
         rerenderSingleGroup(gi, el, group);
@@ -1820,6 +1842,31 @@ function renderMoreDupGroups(){
   dupGroupsRendered = end;
   $("showMoreDupsBtn").classList.toggle("hidden", dupGroupsRendered >= state.duplicateGroups.length);
 }
+function makeThumbObserver(root){
+  return new IntersectionObserver((entries, obs)=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting) return;
+      obs.unobserve(entry.target);
+      const item = state.thumbPending.get(entry.target.id);
+      if(item){ state.thumbPending.delete(entry.target.id); loadThumb(item, entry.target.id); }
+    });
+  }, {root, rootMargin:"200px 0px"});
+}
+let browseThumbObserver = null, dupThumbObserver = null;
+// Called instead of loading a thumbnail immediately: paints it right away if we already have it
+// cached, otherwise waits until the row actually scrolls into view. With dozens of photos/videos
+// on screen at once, firing every read (and every video decode) simultaneously is what made
+// Browse feel slow — this spreads that work out to only what you're actually looking at.
+function queueThumb(item, elId, observer){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const cached = state.thumbCache.get(item.id);
+  if(cached){ paintThumb(el, cached.url, cached.kind); return; }
+  if(!observer){ loadThumb(item, elId); return; } // no IntersectionObserver available — fall back to loading immediately
+  state.thumbPending.set(elId, item);
+  observer.observe(el);
+}
+
 function genericFileSvg(){ return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5"/></svg>`; }
 function bundleSvg(){ return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 8l-9-5-9 5 9 5 9-5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 8v8l9 5 9-5V8M12 13v8" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`; }
 function trackThumbUrl(url){
@@ -1828,21 +1875,38 @@ function trackThumbUrl(url){
 }
 async function loadThumb(item, elId){
   elId = elId || ("thumb-"+item.id);
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const cached = state.thumbCache.get(item.id);
+  if(cached){ paintThumb(el, cached.url, cached.kind); return; }
   try{
     const handle = await resolveFileHandle(item);
     const file = await handle.getFile();
     const url = URL.createObjectURL(file);
     trackThumbUrl(url);
-    const el = document.getElementById(elId);
-    if(!el) { URL.revokeObjectURL(url); return; }
-    if(item.category === "Photos"){
-      el.innerHTML = `<img src="${url}" alt="" loading="lazy">`;
-    } else {
-      el.innerHTML = `<video src="${url}" muted preload="metadata"></video>`;
-      const v = el.querySelector("video");
-      v.addEventListener("loadedmetadata", ()=>{ try{ v.currentTime = Math.min(0.5, v.duration/2); }catch(e){} });
-    }
+    const kind = item.category === "Photos" ? "img" : "video";
+    state.thumbCache.set(item.id, {url, kind});
+    const liveEl = document.getElementById(elId); // the row may have been re-rendered while we were reading the file
+    if(liveEl) paintThumb(liveEl, url, kind);
   }catch(e){ /* leave the generic icon in place */ }
+}
+// Renders into an already-visible icon slot without ever blanking it: the new image/video is
+// faded in only once it actually has a frame to show, so a not-yet-decoded video never flashes
+// solid black over the icon the way swapping innerHTML immediately used to.
+function paintThumb(el, url, kind){
+  if(el.dataset.thumbPainted === url) return;
+  el.dataset.thumbPainted = url;
+  if(kind === "img"){
+    const img = new Image();
+    img.alt = ""; img.className = "thumb-media";
+    img.addEventListener("load", ()=>{ el.appendChild(img); requestAnimationFrame(()=>img.classList.add("in")); });
+    img.src = url;
+  } else {
+    const v = document.createElement("video");
+    v.muted = true; v.preload = "metadata"; v.className = "thumb-media"; v.src = url;
+    v.addEventListener("loadedmetadata", ()=>{ try{ v.currentTime = Math.min(0.5, v.duration/2); }catch(e){} });
+    v.addEventListener("seeked", ()=>{ el.appendChild(v); requestAnimationFrame(()=>v.classList.add("in")); }, {once:true});
+  }
 }
 
 /* ============================================================
@@ -1953,6 +2017,7 @@ function getBrowseFiltered(){
   return sorted;
 }
 function renderBrowseTable(){
+  if(browseThumbObserver) browseThumbObserver.disconnect(); // rows about to be rebuilt — stop watching the old ones
   const filtered = getBrowseFiltered();
   const totalPages = Math.max(1, Math.ceil(filtered.length / BROWSE_PAGE_SIZE));
   browsePage = Math.min(Math.max(0,browsePage), totalPages-1);
@@ -1985,7 +2050,10 @@ function renderBrowseTable(){
     `;
     row.addEventListener("click", ()=>toggleBrowseDetail(item, row));
     body.appendChild(row);
-    if(!item.isBundle && (item.category === "Photos" || item.category === "Videos")) loadThumb(item, "bthumb-"+item.id);
+    if(!item.isBundle && (item.category === "Photos" || item.category === "Videos")){
+      if(!browseThumbObserver && typeof IntersectionObserver !== "undefined") browseThumbObserver = makeThumbObserver(document.querySelector(".browse-table-wrap"));
+      queueThumb(item, "bthumb-"+item.id, browseThumbObserver);
+    }
   });
 }
 function toggleBrowseDetail(item, row){
@@ -2028,14 +2096,104 @@ async function openPreview(item){
     window.open(url, "_blank");
   }catch(e){ alert("Couldn't open a preview for this file."); }
 }
-$("browseFilesBtn").addEventListener("click", ()=>{
+// "Open & browse it": for a folder Undupe already organized. Skips the size/hash duplicate
+// pipeline entirely (there's nothing to de-duplicate in a clean archive) and goes straight to
+// Browse. It still has to read every file's name/size/date once — the platform has no way to
+// check "has this folder changed?" without that — but it never reads file *contents*, which is
+// what makes a real scan slow. If a catalog file from a past run is found, the fresh read is
+// compared against it so you know whether anything's changed since.
+async function openArchiveToBrowse(){
+  let handle;
+  try{ handle = await window.showDirectoryPicker({mode:"read"}); }catch(e){ return; }
+
+  let existingMeta = null;
+  try{
+    const fh = await handle.getFileHandle(CATALOG_FILE_NAME);
+    existingMeta = JSON.parse(await (await fh.getFile()).text());
+  }catch(e){ /* no catalog here, or unreadable — a fresh read still works fine */ }
+
+  state.sources = [{name: handle.name, handle}];
+  state.target = null;
+  state.catalog = [];
+  state.duplicateGroups = [];
+  state.clones = [];
+  state.errors = [];
+  state.excludedCount = 0;
+  state.cancelRequested = false;
+
+  goToStep(2);
+  $("phaseText").textContent = "Reading archive contents…";
+  $("phaseStep").textContent = "";
+  $("scanProgressFill").classList.add("indeterminate");
+  $("scanProgressFill").style.width = "";
+  $("scanProgressPct").textContent = "";
+  $("scanRate").textContent = " "; $("scanEta").textContent = "";
+  $("statFilesFound").textContent = "0"; $("statDataScanned").textContent = "0 GB"; $("statPossibleDupes").textContent = "—";
+  $("scanFooterNote").textContent = "Just reading what's here — nothing is written or compared";
+  scanTimer.reset();
+
+  let count = 0, bytes = 0;
+  readLoop:
+  for await (const entry of walkDirectory(handle, 0)){
+    if(state.cancelRequested) break readLoop;
+    if(entry.pathSegs.length === 0 && entry.name === CATALOG_FILE_NAME) continue; // don't list our own sidecar file
+    if(entry.bundle){
+      let info;
+      try{ info = await measureDirectory(entry.handle); }
+      catch(e){ state.errors.push(`Could not read bundle ${pathJoin(entry.pathSegs, entry.name)}`); continue; }
+      state.catalog.push({ id: state.catalog.length, sourceIndex: 0, pathSegs: entry.pathSegs, name: entry.name, ext: getExt(entry.name),
+        size: info.size, lastModified: info.lastModified || Date.now(), category: "Bundles & Projects", isBundle: true, innerFileCount: info.count });
+      count++; bytes += info.size;
+    } else {
+      let file;
+      try{ file = await withTimeout(entry.handle.getFile(), FILE_READ_TIMEOUT_MS, "getFile"); }
+      catch(e){ state.errors.push(`Could not read ${pathJoin(entry.pathSegs, entry.name)}`); continue; }
+      const ext = getExt(entry.name);
+      state.catalog.push({ id: state.catalog.length, sourceIndex: 0, pathSegs: entry.pathSegs, name: entry.name, ext,
+        size: file.size, lastModified: file.lastModified, category: categorize(ext) });
+      count++; bytes += file.size;
+    }
+    if(count % 15 === 0){
+      $("statFilesFound").textContent = fmtNum(count);
+      $("statDataScanned").textContent = fmtBytes(bytes);
+      $("scanCurrentPath").textContent = pathJoin(entry.pathSegs, entry.name);
+      $("scanProgressText").textContent = `${fmtNum(count)} files read`;
+      scanTimer.tick(count, 0, $("scanRate"), $("scanEta"), "files");
+    }
+    if(count % 300 === 0) await yieldToUI();
+  }
+  if(state.cancelRequested){ goToStep(1); return; }
+
+  $("statFilesFound").textContent = fmtNum(count);
+  $("statDataScanned").textContent = fmtBytes(bytes);
+  updateBrowseButtonVisibility();
+
+  let statusHtml;
+  const dateStr = existingMeta && existingMeta.generatedAt ? new Date(existingMeta.generatedAt).toLocaleDateString() : "";
+  if(existingMeta && typeof existingMeta.totalFiles === "number" && typeof existingMeta.totalBytes === "number"){
+    if(existingMeta.totalFiles === count && existingMeta.totalBytes === bytes){
+      statusHtml = `<span>&#10003;</span><span>Matches the catalog Undupe wrote on ${dateStr} — nothing appears to have changed.</span>`;
+    } else {
+      statusHtml = `<span>&#9888;</span><span>This archive has changed since it was organized on ${dateStr} (was ${fmtNum(existingMeta.totalFiles)} files / ${fmtBytes(existingMeta.totalBytes)}, now ${fmtNum(count)} files / ${fmtBytes(bytes)}). Showing what's actually here now &mdash; run a full scan instead if you want these changes deduplicated.</span>`;
+    }
+  } else {
+    statusHtml = `<span>&#8505;&#65039;</span><span>No Undupe catalog file found in this folder — showing a fresh read of what's here now.</span>`;
+  }
+  openBrowseOverlay(statusHtml);
+}
+$("openArchiveBtn").addEventListener("click", openArchiveToBrowse);
+
+function openBrowseOverlay(statusHtml){
   browsePage = 0;
   $("browseSearchInput").value = "";
   $("browseCategoryFilter").value = "";
   $("browseSortSelect").value = "name-asc";
+  $("archiveStatusNote").classList.toggle("hidden", !statusHtml);
+  $("archiveStatusNote").innerHTML = statusHtml || "";
   renderBrowseTable();
   $("browseOverlay").classList.remove("hidden");
-});
+}
+$("browseFilesBtn").addEventListener("click", ()=>openBrowseOverlay());
 async function indexPhotoDates(){
   const btn = $("indexDatesBtn");
   const todo = state.catalog.filter(it=>isJpeg(it) && !it.exifDone);
@@ -2294,6 +2452,7 @@ async function runMigration(){
   let done = 0, bytesDone = 0;
   const migrateErrors = [];
   const dirCache = new Map();
+  const manifest = []; // records where each kept file actually landed, for the output catalog
   migrateTimer.reset();
   $("migrateRate").textContent = "\u00a0"; $("migrateEta").textContent = "";
 
@@ -2322,6 +2481,7 @@ async function runMigration(){
             catch(e){ migrateErrors.push(`Copied but couldn't remove original bundle: ${pathJoin(item.pathSegs,item.name)}`); }
           }
           bytesDone += item.size;
+          manifest.push({path: item.category+"/"+dest.name, size: item.size, lastModified: item.lastModified, category: item.category, isBundle: true, innerFileCount: item.innerFileCount||0});
         } else if(result.completed){
           migrateErrors.push(`${result.failed} file(s) inside ${pathJoin(item.pathSegs,item.name)} didn't copy cleanly \u2014 original bundle was left untouched`);
         } else {
@@ -2351,6 +2511,7 @@ async function runMigration(){
             catch(e){ migrateErrors.push(`Copied but couldn't remove original: ${pathJoin(item.pathSegs,item.name)}`); }
           }
           bytesDone += item.size;
+          manifest.push({path: item.category+"/"+resolved.name, size: item.size, lastModified: item.lastModified, category: item.category, ext: item.ext||""});
         }
       }
     }catch(e){
@@ -2381,7 +2542,22 @@ async function runMigration(){
     return;
   }
 
+  await writeOutputCatalog(manifest);
   showDone(done, bytesDone, migrateErrors.length);
+}
+
+// Writes a small sidecar file to the organized folder listing what's there (path, size, date, type).
+// Lets "Open & browse an archive" (Setup screen) recognize this folder later and tell you whether
+// anything's changed, instead of starting from nothing.
+async function writeOutputCatalog(files){
+  try{
+    const totalBytes = files.reduce((s,f)=>s+f.size, 0);
+    const doc = { app: "Undupe", version: 1, generatedAt: new Date().toISOString(), totalFiles: files.length, totalBytes, files };
+    const fh = await state.target.handle.getFileHandle(CATALOG_FILE_NAME, {create:true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(doc));
+    await w.close();
+  }catch(e){ state.errors.push("Could not write the archive catalog file: " + e.message); }
 }
 
 /* ============================================================
