@@ -252,6 +252,10 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,0.4),0 0 0 4px rgba(var(--accent-rgb),0.18),0 10px 24px -8px rgba(var(--accent-rgb),0.8);
   }
   .rail-step.done{border-color:rgba(var(--success-rgb),0.5);color:var(--success);background:rgba(var(--success-rgb),0.1);}
+  .rail-step.clickable{cursor:pointer;transition:transform .12s,box-shadow .12s;}
+  .rail-step.clickable:hover{transform:scale(1.08);box-shadow:0 0 0 4px rgba(var(--accent-rgb),0.16);}
+  .mobile-stepper .chip.clickable{cursor:pointer;}
+  .mobile-stepper .chip.clickable:hover{border-color:var(--accent-bright);}
   .rail-line{width:1px;height:22px;background:var(--border-glass-hi);}
 
   .mobile-stepper{display:none;gap:8px;margin-bottom:18px;overflow-x:auto;}
@@ -287,6 +291,8 @@
   .folder-row .folder-name{flex-grow:1;font-size:0.86rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .folder-row .remove-btn{background:none;border:none;color:var(--text-low);cursor:pointer;padding:4px;border-radius:6px;flex-shrink:0;}
   .folder-row .remove-btn:hover{color:var(--danger-bright);background:rgba(var(--danger-rgb),0.12);}
+  .folder-row .remove-btn:disabled{opacity:0.35;cursor:not-allowed;}
+  .folder-row .remove-btn:disabled:hover{color:var(--text-low);background:none;}
   .archive-open-row{
     display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 14px;
     margin-bottom:26px;padding:13px 16px;border-radius:var(--radius-sm);
@@ -685,6 +691,8 @@
         <div class="panel">
           <h2 class="serif">Where should we look?</h2>
           <p class="sub">Add one or more folders to scan &mdash; your backup drives, exports, whatever's grown out of control. Nothing is touched until you approve the final migration.</p>
+
+          <div id="setupLockNote" class="bundle-note hidden" style="margin-bottom:20px;"><span>&#128274;</span><span>A scan or migration is running in the background &mdash; Setup is read-only until it finishes, so nothing changes underneath it. Feel free to look around; it'll keep going.</span></div>
 
           <div class="archive-open-row">
             <span>Already organized this archive with Undupe before?</span>
@@ -1357,6 +1365,7 @@ async function copyDirectoryRecursive(srcDirHandle, destParentHandle, name){
    ============================================================ */
 const $ = (id) => document.getElementById(id);
 let currentStep = 1;
+let furthestStep = 1; // how far you've actually gotten this session — the rail only lets you click back to a step you've truly reached, never ahead to one whose data isn't ready yet
 
 /* ============================================================
    TOASTS: one themed component for every notification and
@@ -1423,6 +1432,10 @@ function resetCancelButton(id, label){
 // the browser, not by us — no site can customize or theme it, by design (so a page can't fake a
 // convincing "are you sure" to keep you from leaving).
 let activeOperation = false;
+function setActiveOperation(v){
+  activeOperation = v;
+  syncSetupInteractivity();
+}
 window.addEventListener("beforeunload", (e)=>{
   if(!activeOperation) return;
   e.preventDefault();
@@ -1464,11 +1477,19 @@ function renderRail(){
   mobile.innerHTML = "";
   STEPS.forEach((label, i)=>{
     const n = i+1;
-    const state_ = n < currentStep ? "done" : (n === currentStep ? "active" : "");
+    // "done" reflects steps you've truly reached, not just steps numerically before wherever
+    // you're currently peeking — so clicking back to review step 1 doesn't make steps 2/3/4 look
+    // unfinished when they aren't.
+    const state_ = n === currentStep ? "active" : (n <= furthestStep ? "done" : "");
+    // Step 2 (Scanning) never becomes a permanent "reached" step — it's a live progress screen,
+    // not something with lasting data to review — but it's worth clicking back to WHILE something
+    // is actually running, to check on progress, which is exactly when activeOperation is true.
+    const reachable = n !== currentStep && (n === 2 ? activeOperation : n <= furthestStep);
     const el = document.createElement("div");
-    el.className = "rail-step " + state_;
+    el.className = "rail-step " + state_ + (reachable ? " clickable" : "");
     el.textContent = n;
-    el.title = label;
+    el.title = reachable ? label + " — click to view" : label;
+    if(reachable) el.addEventListener("click", ()=>goToStep(n));
     rail.appendChild(el);
     if(n < STEPS.length){
       const line = document.createElement("div");
@@ -1476,8 +1497,9 @@ function renderRail(){
       rail.appendChild(line);
     }
     const chip = document.createElement("div");
-    chip.className = "chip " + state_;
+    chip.className = "chip " + state_ + (reachable ? " clickable" : "");
     chip.textContent = `${n}. ${label}`;
+    if(reachable) chip.addEventListener("click", ()=>goToStep(n));
     mobile.appendChild(chip);
   });
 }
@@ -1492,7 +1514,7 @@ function applyStep(n){
   // Re-sync whatever the step needs to show, every time it's entered — not just when reached via
   // its "normal" button — so arriving via browser back/forward (or the in-app Back buttons, which
   // go through the same path) never shows stale button states or stale review data.
-  if(n === 1) updateBeginScanEnabled();
+  if(n === 1) syncSetupInteractivity();
   if(n === 3) renderDuplicateGroups();
   if(n === 4) renderMigratePreview();
   window.scrollTo({top:0, behavior:"smooth"});
@@ -1503,6 +1525,7 @@ function applyStep(n){
 // of leaving the app entirely. Code reacting TO a popstate event calls applyStep() directly instead,
 // since the history position has already moved by the time that event fires.
 function goToStep(n){
+  if(n > furthestStep) furthestStep = n;
   applyStep(n);
   try{
     // Avoid a redundant duplicate entry if we're already sitting on step n (e.g. cancelling a scan
@@ -1580,8 +1603,25 @@ function xSvg(){ return `<svg width="13" height="13" viewBox="0 0 24 24" fill="n
 function escapeHtml(s){ const d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
 
 function updateBeginScanEnabled(){
-  $("beginScanBtn").disabled = !(state.sources.length > 0 && state.target);
-  $("quickScanBtn").disabled = !(state.sources.length > 0);
+  $("beginScanBtn").disabled = !(state.sources.length > 0 && state.target) || activeOperation;
+  $("quickScanBtn").disabled = !(state.sources.length > 0) || activeOperation;
+}
+// Setup's controls mutate state.sources/state.target/dedup rule/exclude patterns — all things an
+// already-running scan or migration is actively relying on. Peeking at Setup (via the step rail)
+// while something is running elsewhere is safe, since it's read-only underneath; actually changing
+// anything here mid-run isn't, so the controls lock themselves for that window instead.
+function syncSetupInteractivity(){
+  const locked = activeOperation;
+  ["addSourceBtn","pickTargetBtn","pickExcludeFolderBtn","excludeInput","openArchiveBtn"].forEach(id=>{
+    const el = $(id); if(el) el.disabled = locked;
+  });
+  document.querySelectorAll("#sourceList .remove-btn, #targetRow .remove-btn").forEach(b=>{ b.disabled = locked; });
+  document.querySelectorAll('input[name="dupRule"]').forEach(r=>{ r.disabled = locked; });
+  $("modeToggle").disabled = locked;
+  $("setupLockNote").classList.toggle("hidden", !locked);
+  updateBeginScanEnabled();
+  renderRail(); // step 2's clickability (and the lock note) depends on activeOperation, which can
+                 // change independently of any step transition — keep the rail in sync either way.
 }
 
 $("addSourceBtn").addEventListener("click", async ()=>{
@@ -1828,7 +1868,7 @@ async function catalogAllSources(checkpoint){
 
 async function runScan(){
   resetCancelButton("cancelScanBtn", "Cancel scan");
-  activeOperation = true;
+  setActiveOperation(true);
   try{
   $("scanFooterNote").textContent = "Checkpoints save every 2,500 files, in case you need to close the tab";
   state.cancelRequested = false;
@@ -1851,7 +1891,7 @@ async function runScan(){
   log(`Cataloged ${state.catalog.length} files (${fmtBytes(result.bytes)})` + (state.excludedCount ? ` \u2014 ${state.excludedCount} skipped by your exclude list` : ""));
 
   await runHashPhases();
-  } finally { activeOperation = false; }
+  } finally { setActiveOperation(false); }
 }
 
 // Quick scan: the same metadata-only walk as Phase 1 of a real scan (this is already as fast as a
@@ -1860,7 +1900,7 @@ async function runScan(){
 // so you can sanity-check what's actually eating space before committing to a full scan.
 async function runQuickScan(){
   resetCancelButton("cancelScanBtn", "Cancel scan");
-  activeOperation = true;
+  setActiveOperation(true);
   try{
   $("scanFooterNote").textContent = "Quick scan \u2014 sizes and names only, nothing is written or compared";
   state.cancelRequested = false;
@@ -1885,7 +1925,7 @@ async function runQuickScan(){
   updateBrowseButtonVisibility();
   log(`Quick scan cataloged ${state.catalog.length} files (${fmtBytes(result.bytes)})`);
   openBrowseOverlay(null, "sizemap");
-  } finally { activeOperation = false; }
+  } finally { setActiveOperation(false); }
 }
 $("quickScanBtn").addEventListener("click", ()=>{
   $("quickScanBtn").disabled = true; $("beginScanBtn").disabled = true;
@@ -2685,7 +2725,7 @@ async function openArchiveToBrowse(){
   state.excludedCount = 0;
   state.cancelRequested = false;
   resetCancelButton("cancelScanBtn", "Cancel scan");
-  activeOperation = true;
+  setActiveOperation(true);
   try{
 
   applyStep(2); // transient screen — doesn't get its own "back" stop; step 1 stays underneath
@@ -2747,7 +2787,7 @@ async function openArchiveToBrowse(){
     statusHtml = `<span>&#8505;&#65039;</span><span>No Undupe catalog file found in this folder — showing a fresh read of what's here now.</span>`;
   }
   openBrowseOverlay(statusHtml);
-  } finally { activeOperation = false; }
+  } finally { setActiveOperation(false); }
 }
 $("openArchiveBtn").addEventListener("click", openArchiveToBrowse);
 
@@ -3060,7 +3100,7 @@ $("cancelMigrateBtn").addEventListener("click", async ()=>{
 
 async function runMigration(){
   resetCancelButton("cancelMigrateBtn", "Cancel");
-  activeOperation = true;
+  setActiveOperation(true);
   try{
   state.cancelRequested = false;
   state.skippedAlreadyPresent = 0;
@@ -3181,7 +3221,7 @@ async function runMigration(){
 
   await writeOutputCatalog(manifest);
   showDone(done, bytesDone, migrateErrors.length);
-  } finally { activeOperation = false; }
+  } finally { setActiveOperation(false); }
 }
 
 // Writes a small sidecar file to the organized folder listing what's there (path, size, date, type).
