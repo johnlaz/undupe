@@ -478,6 +478,28 @@
   textarea.bare::placeholder{color:var(--text-low);}
   select.bare option{background:var(--panel-solid);color:var(--text-hi);}
 
+  /* ---------- size map (treemap) ---------- */
+  .sizemap-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .sizemap-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-bottom:12px;font-size:0.78rem;color:var(--text-mid);}
+  .sizemap-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .sizemap-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0;}
+  .sizemap-canvas-wrap{
+    border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-glass);
+    background:var(--recess);box-shadow:var(--inset-recess);
+  }
+  #sizeMapSvg{display:block;width:100%;height:auto;aspect-ratio:1000/560;}
+  .sizemap-tile{stroke:var(--bg-deep);stroke-width:1.5;cursor:pointer;transition:opacity .12s;}
+  .sizemap-tile:hover{opacity:0.78;}
+  .sizemap-tile-label{pointer-events:none;fill:#fff;font-family:'DM Sans',sans-serif;paint-order:stroke;stroke:rgba(0,0,0,0.55);stroke-width:2.5px;stroke-linejoin:round;}
+  .sizemap-tooltip{
+    position:fixed;z-index:90;pointer-events:none;max-width:260px;padding:8px 12px;border-radius:9px;
+    background:var(--panel-solid);border:1px solid var(--glass-edge-hi);box-shadow:0 14px 30px -10px rgba(0,0,0,0.55);
+    font-size:0.78rem;color:var(--text-hi);line-height:1.5;
+  }
+  .sizemap-tooltip b{display:block;font-size:0.82rem;margin-bottom:2px;word-break:break-word;}
+  .sizemap-tooltip span{color:var(--text-low);}
+  .danger-note{font-size:0.76rem;color:var(--warn-text);margin-top:8px;}
+
   /* ---------- browse overlay ---------- */
   .browse-overlay{
     position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;
@@ -512,14 +534,29 @@
   .browse-pagination{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;font-size:0.8rem;color:var(--text-low);flex-shrink:0;}
   @media (max-width:640px){ .browse-col-cat,.browse-col-date{display:none;} }
 
-  /* ---------- update toast ---------- */
+  /* ---------- toasts (notifications + confirmations) ---------- */
+  .toast-stack{
+    position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+    z-index:90;display:flex;flex-direction:column-reverse;gap:10px;align-items:center;
+    width:min(440px, calc(100vw - 40px));pointer-events:none;
+  }
   .toast{
-    position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:80;
-    display:flex;align-items:center;gap:14px;padding:12px 14px 12px 18px;border-radius:14px;
+    pointer-events:auto;width:100%;box-sizing:border-box;
+    display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;
     background:var(--glass-strong);border:1px solid var(--glass-edge-hi);font-size:0.85rem;
     -webkit-backdrop-filter:blur(26px) saturate(1.5);backdrop-filter:blur(26px) saturate(1.5);
     box-shadow:0 24px 50px -20px rgba(0,0,0,0.7),var(--inset-hi);
+    animation:toast-in .2s ease;
   }
+  .toast.leaving{animation:toast-out .16s ease forwards;}
+  @keyframes toast-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes toast-out{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(8px);}}
+  .toast.danger{border-color:rgba(var(--danger-rgb),0.42);}
+  .toast-body{flex:1;min-width:0;}
+  .toast-title{font-weight:600;color:var(--text-hi);margin-bottom:2px;}
+  .toast-msg{color:var(--text-mid);font-size:0.8rem;line-height:1.5;white-space:pre-line;}
+  .toast-actions{display:flex;gap:8px;flex-shrink:0;}
+  @media (max-width:520px){ .toast{flex-direction:column;align-items:stretch;} .toast-actions{justify-content:flex-end;} }
 
   /* ---------- fallbacks ---------- */
   @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
@@ -718,9 +755,11 @@
 
           <div id="overlapWarning" class="warn-note hidden" style="margin-top:20px;"></div>
 
-          <div class="footer-row">
+          <div class="footer-row split">
+            <button id="quickScanBtn" class="btn btn-ghost" disabled>Quick scan</button>
             <button id="beginScanBtn" class="btn btn-primary" disabled>Begin scan</button>
           </div>
+          <div class="rr-desc" style="margin-top:10px;">Quick scan reads sizes and names only &mdash; skips duplicate checking entirely, so it finishes in a fraction of the time. Nothing is written. Good for spotting the big space-hogs before you commit to a full scan.</div>
         </div>
       </section>
 
@@ -880,21 +919,30 @@
       </select>
     </div>
     <div id="archiveStatusNote" class="bundle-note hidden" style="margin-bottom:14px;"></div>
+    <div class="sizemap-tabs">
+      <button type="button" id="viewListBtn" class="btn btn-sm btn-primary">List</button>
+      <button type="button" id="viewSizeMapBtn" class="btn btn-sm btn-ghost">Size map</button>
+    </div>
     <div class="browse-meta" id="browseMeta"></div>
-    <div class="browse-table-wrap"><div id="browseTableBody"></div></div>
-    <div class="browse-pagination">
-      <button id="browsePrevBtn" class="btn btn-ghost btn-sm">Previous</button>
-      <span id="browsePageLabel"></span>
-      <button id="browseNextBtn" class="btn btn-ghost btn-sm">Next</button>
+    <div id="listViewWrap">
+      <div class="browse-table-wrap"><div id="browseTableBody"></div></div>
+      <div class="browse-pagination">
+        <button id="browsePrevBtn" class="btn btn-ghost btn-sm">Previous</button>
+        <span id="browsePageLabel"></span>
+        <button id="browseNextBtn" class="btn btn-ghost btn-sm">Next</button>
+      </div>
+    </div>
+    <div id="sizeMapWrap" class="hidden">
+      <div class="sizemap-legend" id="sizeMapLegend"></div>
+      <div class="sizemap-canvas-wrap">
+        <svg id="sizeMapSvg" viewBox="0 0 1000 560" preserveAspectRatio="none" role="img" aria-label="Treemap of the largest files, sized by disk space"></svg>
+      </div>
+      <div id="sizeMapDetail" class="browse-detail hidden" style="margin-top:14px;"></div>
     </div>
   </div>
 </div>
 
-<div id="updateToast" class="toast hidden" role="status">
-  <span>A new version of Undupe is ready.</span>
-  <button id="updateNowBtn" class="btn btn-primary btn-sm">Reload to update</button>
-  <button id="updateLaterBtn" class="btn btn-ghost btn-sm">Later</button>
-</div>
+<div id="toastStack" class="toast-stack" aria-live="polite"></div>
 
 <script>
 (function(){
@@ -924,14 +972,26 @@ function isBundleDir(name){
 }
 const CATALOG_CHECKPOINT_EVERY = 2500;
 const FILE_READ_TIMEOUT_MS = 25000;   // cataloging + partial hashing: metadata/small reads should never take this long
-const FULL_HASH_TIMEOUT_MS = 180000;
-const CATALOG_FILE_NAME = "undupe-catalog.json"; // sidecar manifest written to the output folder after organizing  // full hashing: large legitimate files (multi-GB video) need real headroom
+const FULL_HASH_TIMEOUT_MS = 180000;  // full hashing: large legitimate files (multi-GB video) need real headroom
+const CATALOG_FILE_NAME = "undupe-catalog.json"; // sidecar manifest written to the output folder after organizing
 function withTimeout(promise, ms, label){
   let timer;
   const timeout = new Promise((_,reject)=>{ timer = setTimeout(()=>reject(new Error("timeout:"+(label||""))), ms); });
-  return Promise.race([promise, timeout]).finally(()=>clearTimeout(timer));
+  // Races against the cancel signal too, not just the timeout. Without this, clicking Cancel while a
+  // single file read is already in flight had to wait for that read to finish or time out (up to 25s,
+  // or 3 minutes for a big file's full hash) before the scan actually stopped — Cancel would silently
+  // do nothing for a long stretch. This makes an in-flight read abandon almost immediately instead.
+  const cancelled = cancelSignalPromise.then(()=>{ throw new Error("cancelled:"+(label||"")); });
+  return Promise.race([promise, timeout, cancelled]).finally(()=>clearTimeout(timer));
 }
 function isTimeoutError(e){ return e && /^timeout:/.test(e.message||""); }
+function isCancelledError(e){ return e && /^cancelled:/.test(e.message||""); }
+let cancelSignalResolve = null;
+let cancelSignalPromise = new Promise(r=>{ cancelSignalResolve = r; });
+function triggerCancelSignal(){
+  if(cancelSignalResolve) cancelSignalResolve();
+  cancelSignalPromise = new Promise(r=>{ cancelSignalResolve = r; }); // fresh, unresolved signal for the next run
+}
 const HASH_WORKER_SRC = `
 self.onmessage = async (e) => {
   const { id, file, mode } = e.data;
@@ -1076,6 +1136,7 @@ const state = {
   thumbPending: new Map(), // elementId -> item, for thumbnails not yet scrolled into view
   clones: [],
   excludePatterns: [],
+  browseView: "list",
   exifCache: new Map(),
   skippedAlreadyPresent: 0
 };
@@ -1143,6 +1204,7 @@ async function* walkDirectory(dirHandle, sourceIndex, pathSegs){
 async function measureDirectory(dirHandle){
   let size = 0, count = 0, lastModified = 0, skipped = 0;
   for await (const [name, handle] of dirHandle.entries()){
+    if(state.cancelRequested) break;
     if(handle.kind === "directory"){
       const sub = await measureDirectory(handle);
       size += sub.size; count += sub.count; lastModified = Math.max(lastModified, sub.lastModified); skipped += sub.skipped;
@@ -1150,7 +1212,7 @@ async function measureDirectory(dirHandle){
       try{
         const f = await withTimeout(handle.getFile(), FILE_READ_TIMEOUT_MS, "getFile");
         size += f.size; count++; lastModified = Math.max(lastModified, f.lastModified);
-      }catch(e){ skipped++; /* unreadable or stuck (e.g. an undownloaded cloud file) — measure the rest, don't hang */ }
+      }catch(e){ if(!isCancelledError(e)) skipped++; /* unreadable or stuck (e.g. an undownloaded cloud file) — measure the rest, don't hang */ }
     }
   }
   return {size, count, lastModified, skipped};
@@ -1294,6 +1356,77 @@ const $ = (id) => document.getElementById(id);
 let currentStep = 1;
 
 /* ============================================================
+   TOASTS: one themed component for every notification and
+   confirmation in the app, replacing native confirm()/alert()
+   (which can't be styled and look jarring against the glass UI).
+   ============================================================ */
+function renderToast({title, message, kind, actions}){
+  const el = document.createElement("div");
+  el.className = "toast" + (kind === "danger" ? " danger" : "");
+  el.setAttribute("role", kind === "danger" ? "alertdialog" : "status");
+  const body = document.createElement("div");
+  body.className = "toast-body";
+  if(title){ const t = document.createElement("div"); t.className = "toast-title"; t.textContent = title; body.appendChild(t); }
+  if(message){ const m = document.createElement("div"); m.className = "toast-msg"; m.textContent = message; body.appendChild(m); }
+  el.appendChild(body);
+  if(actions && actions.length){
+    const wrap = document.createElement("div");
+    wrap.className = "toast-actions";
+    actions.forEach(a=>{
+      const btn = document.createElement("button");
+      btn.className = "btn btn-sm " + (a.variant === "primary" ? "btn-primary" : a.variant === "danger" ? "btn-danger" : "btn-ghost");
+      btn.textContent = a.label;
+      btn.addEventListener("click", ()=>{ dismissToast(el); if(a.onClick) a.onClick(); });
+      wrap.appendChild(btn);
+    });
+    el.appendChild(wrap);
+  }
+  $("toastStack").appendChild(el);
+  return el;
+}
+function dismissToast(el){
+  if(!el || !el.isConnected || el.classList.contains("leaving")) return;
+  el.classList.add("leaving");
+  setTimeout(()=>el.remove(), 180);
+}
+// A simple, auto-dismissing notice — the themed replacement for alert().
+function notify(message, opts){
+  opts = opts || {};
+  const el = renderToast({title: opts.title, message, kind: opts.kind, actions:[{label: opts.actionLabel || "OK", variant:"ghost"}]});
+  if(opts.autoDismiss !== false) setTimeout(()=>dismissToast(el), opts.duration || 5000);
+  return el;
+}
+// The themed replacement for confirm(): stays open until the user answers, resolves true/false.
+function confirmToast({title, message, confirmLabel, cancelLabel, danger}){
+  return new Promise(resolve=>{
+    let settled = false;
+    renderToast({
+      title, message, kind: danger ? "danger" : undefined,
+      actions: [
+        {label: cancelLabel || "Cancel", variant:"ghost", onClick: ()=>{ if(!settled){ settled=true; resolve(false); } }},
+        {label: confirmLabel || "Confirm", variant: danger ? "danger" : "primary", onClick: ()=>{ if(!settled){ settled=true; resolve(true); } }}
+      ]
+    });
+  });
+}
+function resetCancelButton(id, label){
+  const btn = $(id);
+  btn.disabled = false;
+  btn.textContent = label;
+}
+// Back-click protection: only guards against leaving the page while a scan or migration is
+// genuinely running (never while idle), since that's the only time a browser-back, tab close, or
+// accidental navigation would actually lose in-progress work. The wording of this dialog is set by
+// the browser, not by us — no site can customize or theme it, by design (so a page can't fake a
+// convincing "are you sure" to keep you from leaving).
+let activeOperation = false;
+window.addEventListener("beforeunload", (e)=>{
+  if(!activeOperation) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+/* ============================================================
    THEME
    ============================================================ */
 const THEME_KEY = "archiveSanitizerTheme";
@@ -1404,6 +1537,7 @@ function escapeHtml(s){ const d=document.createElement("div"); d.textContent=s; 
 
 function updateBeginScanEnabled(){
   $("beginScanBtn").disabled = !(state.sources.length > 0 && state.target);
+  $("quickScanBtn").disabled = !(state.sources.length > 0);
 }
 
 $("addSourceBtn").addEventListener("click", async ()=>{
@@ -1489,7 +1623,13 @@ $("beginScanBtn").addEventListener("click", async ()=>{
 });
 
 $("startOverBtn").addEventListener("click", async ()=>{
-  if(!confirm("Start a new scan? This clears the current session (your source and output folders will need to be re-selected).")) return;
+  const sure = await confirmToast({
+    title: "Start a new scan?",
+    message: "This clears the current session \u2014 your source and output folders will need to be re-selected.",
+    confirmLabel: "Start over",
+    cancelLabel: "Stay here"
+  });
+  if(!sure) return;
   await idbClearAll();
   location.reload();
 });
@@ -1535,17 +1675,7 @@ function makeProgressTimer(){
 }
 const scanTimer = makeProgressTimer(), migrateTimer = makeProgressTimer();
 
-async function runScan(){
-  $("scanFooterNote").textContent = "Checkpoints save every 2,500 files, in case you need to close the tab";
-  state.cancelRequested = false;
-  state.errors = [];
-  state.catalog = [];
-  state.excludedCount = 0;
-  state.scanStartedAt = Date.now();
-  log("Scan started" + (state.excludePatterns.length ? ` (excluding: ${state.excludePatterns.join(", ")})` : ""));
-  setPhase("Cataloging files\u2026", true, 1);
-  scanTimer.reset();
-
+async function catalogAllSources(checkpoint){
   let count = 0, bytes = 0;
   outer:
   for(let si=0; si<state.sources.length; si++){
@@ -1582,6 +1712,7 @@ async function runScan(){
       let file;
       try{ file = await withTimeout(entry.handle.getFile(), FILE_READ_TIMEOUT_MS, "getFile"); }
       catch(e){
+        if(isCancelledError(e)) break outer;
         state.errors.push(isTimeoutError(e)
           ? `Skipped after ${FILE_READ_TIMEOUT_MS/1000}s, still not readable (often a cloud file that hasn't downloaded yet): ${pathJoin(entry.pathSegs, entry.name)}`
           : `Could not read ${pathJoin(entry.pathSegs, entry.name)}`);
@@ -1607,24 +1738,82 @@ async function runScan(){
         scanTimer.tick(count, 0, $("scanRate"), $("scanEta"), "files");
       }
       if(count % 300 === 0) await yieldToUI();
-      if(count % CATALOG_CHECKPOINT_EVERY === 0) await checkpointCatalog(false);
+      if(checkpoint && count % CATALOG_CHECKPOINT_EVERY === 0) await checkpointCatalog(false);
     }
   }
+  if(state.cancelRequested) return {cancelled:true, count, bytes};
+  $("statFilesFound").textContent = fmtNum(count);
+  $("statDataScanned").textContent = fmtBytes(bytes);
+  if(checkpoint) await checkpointCatalog(true);
+  return {cancelled:false, count, bytes};
+}
 
-  if(state.cancelRequested){
+async function runScan(){
+  resetCancelButton("cancelScanBtn", "Cancel scan");
+  activeOperation = true;
+  try{
+  $("scanFooterNote").textContent = "Checkpoints save every 2,500 files, in case you need to close the tab";
+  state.cancelRequested = false;
+  state.errors = [];
+  state.catalog = [];
+  state.excludedCount = 0;
+  state.scanStartedAt = Date.now();
+  log("Scan started" + (state.excludePatterns.length ? ` (excluding: ${state.excludePatterns.join(", ")})` : ""));
+  setPhase("Cataloging files\u2026", true, 1);
+  scanTimer.reset();
+
+  const result = await catalogAllSources(true);
+  if(result.cancelled){
     log("Scan cancelled during cataloging");
     goToStep(1);
     return;
   }
 
-  $("statFilesFound").textContent = fmtNum(state.catalog.length);
-  $("statDataScanned").textContent = fmtBytes(bytes);
-  await checkpointCatalog(true);
   updateBrowseButtonVisibility();
-  log(`Cataloged ${state.catalog.length} files (${fmtBytes(bytes)})` + (state.excludedCount ? ` \u2014 ${state.excludedCount} skipped by your exclude list` : ""));
+  log(`Cataloged ${state.catalog.length} files (${fmtBytes(result.bytes)})` + (state.excludedCount ? ` \u2014 ${state.excludedCount} skipped by your exclude list` : ""));
 
   await runHashPhases();
+  } finally { activeOperation = false; }
 }
+
+// Quick scan: the same metadata-only walk as Phase 1 of a real scan (this is already as fast as a
+// tool like WinDirStat, since neither reads file *contents* — just names/sizes/dates), but stops
+// there. No duplicate detection, no target folder, nothing written. Lands straight in the Size Map
+// so you can sanity-check what's actually eating space before committing to a full scan.
+async function runQuickScan(){
+  resetCancelButton("cancelScanBtn", "Cancel scan");
+  activeOperation = true;
+  try{
+  $("scanFooterNote").textContent = "Quick scan \u2014 sizes and names only, nothing is written or compared";
+  state.cancelRequested = false;
+  state.errors = [];
+  state.catalog = [];
+  state.duplicateGroups = [];
+  state.clones = [];
+  state.excludedCount = 0;
+  state.scanStartedAt = Date.now();
+  log("Quick scan started" + (state.excludePatterns.length ? ` (excluding: ${state.excludePatterns.join(", ")})` : ""));
+  setPhase("Reading file sizes\u2026", true);
+  $("phaseStep").textContent = "Quick scan";
+  scanTimer.reset();
+
+  const result = await catalogAllSources(false);
+  if(result.cancelled){
+    log("Quick scan cancelled");
+    goToStep(1);
+    return;
+  }
+
+  updateBrowseButtonVisibility();
+  log(`Quick scan cataloged ${state.catalog.length} files (${fmtBytes(result.bytes)})`);
+  openBrowseOverlay(null, "sizemap");
+  } finally { activeOperation = false; }
+}
+$("quickScanBtn").addEventListener("click", ()=>{
+  $("quickScanBtn").disabled = true; $("beginScanBtn").disabled = true;
+  goToStep(2);
+  runQuickScan().finally(updateBeginScanEnabled);
+});
 
 async function checkpointCatalog(final){
   await idbSet("catalog", state.catalog);
@@ -1717,6 +1906,7 @@ async function hashRound(items, mode, pool){
         const hash = await withTimeout(pool.hash(file, mode), hashTimeout, "hash");
         if(mode === "partial") item.partialHash = hash; else item.fullHash = hash;
       }catch(e){
+        if(isCancelledError(e)) return;
         // Treated as "not a duplicate" rather than dropped: it's excluded from this round's matching,
         // never mistakenly merged into a group, and still gets organized normally later.
         state.errors.push(isTimeoutError(e)
@@ -1772,8 +1962,19 @@ function setPhase(text, indeterminate, step){
   $("scanEta").textContent = "";
 }
 
-$("cancelScanBtn").addEventListener("click", ()=>{
+$("cancelScanBtn").addEventListener("click", async ()=>{
+  const sure = await confirmToast({
+    title: "Stop this scan?",
+    message: "Files already catalogued are kept up to the last checkpoint. You can start a new scan any time.",
+    confirmLabel: "Stop scanning",
+    cancelLabel: "Keep going",
+    danger: true
+  });
+  if(!sure) return;
+  $("cancelScanBtn").disabled = true;
+  $("cancelScanBtn").textContent = "Stopping\u2026";
   state.cancelRequested = true;
+  triggerCancelSignal();
 });
 
 /* ============================================================
@@ -2056,37 +2257,224 @@ function renderBrowseTable(){
     }
   });
 }
-function toggleBrowseDetail(item, row){
-  const existing = row.nextElementSibling;
-  if(existing && existing.classList.contains("browse-detail")){ existing.remove(); return; }
-  document.querySelectorAll(".browse-detail").forEach(d=>d.remove());
+function detailInnerHtml(item, idPrefix){
   const srcName = state.sources[item.sourceIndex] ? state.sources[item.sourceIndex].name : "?";
   const canPreview = !item.isBundle && (item.category === "Photos" || item.category === "Videos" || item.category === "Documents");
-  const detail = document.createElement("div");
-  detail.className = "browse-detail";
-  detail.innerHTML = `
+  return `
     <div><strong>Full path:</strong> ${escapeHtml(srcName)}/${escapeHtml(pathJoin(item.pathSegs, item.name))}</div>
     <div><strong>Size:</strong> ${fmtBytes(item.size)}</div>
     <div><strong>Modified:</strong> ${new Date(item.lastModified).toLocaleString()}</div>
     <div><strong>Type:</strong> ${escapeHtml(item.category)}${item.ext ? " \u00b7 ." + escapeHtml(item.ext) : ""}</div>
     ${item.isBundle ? `<div><strong>Contains:</strong> ${fmtNum(item.innerFileCount||0)} files inside</div>` : ""}
-    ${canPreview ? `<button class="btn btn-ghost btn-sm" id="previewBtn-${item.id}" style="margin-top:6px;">Open preview in new tab</button>` : ""}
+    <div id="${idPrefix}-exif-${item.id}"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+      ${canPreview ? `<button class="btn btn-ghost btn-sm" id="${idPrefix}-preview-${item.id}">Open preview in new tab</button>` : ""}
+      <button class="btn btn-danger btn-sm" id="${idPrefix}-delete-${item.id}">Delete ${item.isBundle ? "folder" : "file"} forever</button>
+    </div>
+    <div class="danger-note">Permanently deletes from the source drive &mdash; not a Recycle Bin or Trash. This cannot be undone.</div>
   `;
-  row.insertAdjacentElement("afterend", detail);
+}
+function wireDetailButtons(item, idPrefix, detailEl, onDeleted){
   if(isJpeg(item)){
     readExifFor(item).then(ex=>{
-      if(!ex || !detail.isConnected) return;
+      if(!ex || !detailEl.isConnected) return;
       const lines = [];
       if(ex.taken) lines.push(`<div><strong>Date taken:</strong> ${new Date(ex.taken).toLocaleString()}</div>`);
       const cam = [ex.make, ex.model].filter(Boolean).join(" ");
       if(cam) lines.push(`<div><strong>Camera:</strong> ${escapeHtml(cam)}</div>`);
       if(ex.width && ex.height) lines.push(`<div><strong>Dimensions:</strong> ${ex.width} \u00d7 ${ex.height}</div>`);
-      if(lines.length) detail.insertAdjacentHTML("beforeend", lines.join(""));
+      const slot = document.getElementById(`${idPrefix}-exif-${item.id}`);
+      if(slot && lines.length) slot.innerHTML = lines.join("");
     });
   }
-  if(canPreview){
-    document.getElementById("previewBtn-"+item.id).addEventListener("click", ()=>openPreview(item));
+  const previewBtn = document.getElementById(`${idPrefix}-preview-${item.id}`);
+  if(previewBtn) previewBtn.addEventListener("click", ()=>openPreview(item));
+  const deleteBtn = document.getElementById(`${idPrefix}-delete-${item.id}`);
+  if(deleteBtn) deleteBtn.addEventListener("click", async ()=>{
+    deleteBtn.disabled = true;
+    const ok = await deleteFileForever(item);
+    if(ok) onDeleted(); else deleteBtn.disabled = false;
+  });
+}
+// Deletion is real and permanent: File System Access API's removeEntry() does not use the OS
+// Recycle Bin / Trash. Always confirmed by name and size before it runs.
+async function deleteFileForever(item){
+  const label = item.isBundle ? "folder" : "file";
+  const fullPath = pathJoin(item.pathSegs, item.name);
+  const sure = await confirmToast({
+    title: `Delete this ${label} forever?`,
+    message: `${fullPath}\n${fmtBytes(item.size)}\n\nThis does NOT go to your Recycle Bin or Trash. This cannot be undone.`,
+    confirmLabel: "Delete forever",
+    cancelLabel: "Keep it",
+    danger: true
+  });
+  if(!sure) return false;
+  try{
+    const parentDir = await resolveDirHandle(item.sourceIndex, item.pathSegs);
+    if(item.isBundle) await parentDir.removeEntry(item.name, {recursive:true});
+    else await parentDir.removeEntry(item.name);
+    state.catalog = state.catalog.filter(f=>f.id !== item.id);
+    state.thumbCache.delete(item.id);
+    log(`Deleted ${fullPath} (${fmtBytes(item.size)})`);
+    updateBrowseButtonVisibility();
+    return true;
+  }catch(e){
+    notify("Couldn't delete this: " + e.message, {kind:"danger", duration:7000});
+    return false;
   }
+}
+function toggleBrowseDetail(item, row){
+  const existing = row.nextElementSibling;
+  if(existing && existing.classList.contains("browse-detail")){ existing.remove(); return; }
+  document.querySelectorAll(".browse-detail").forEach(d=>d.remove());
+  const detail = document.createElement("div");
+  detail.className = "browse-detail";
+  detail.innerHTML = detailInnerHtml(item, "bd");
+  row.insertAdjacentElement("afterend", detail);
+  wireDetailButtons(item, "bd", detail, ()=>{
+    detail.remove();
+    renderBrowseTable();
+  });
+}
+
+/* ============================================================
+   SIZE MAP (treemap): WinDirStat-style visual for spotting the
+   largest files before deciding what's worth deleting or deduping.
+   ============================================================ */
+const SIZEMAP_COLORS = {
+  "Photos": "#a855f7", "Videos": "#38bdf8", "Documents": "#94a3b8",
+  "Audio": "#34d399", "Bundles & Projects": "#eab308", "Other": "#64748b"
+};
+function sizemapColor(cat){ return SIZEMAP_COLORS[cat] || SIZEMAP_COLORS.Other; }
+const SIZEMAP_MAX_TILES = 200;
+
+// Squarified treemap layout (Bruls/Huizing/van Wijk). Lays rectangles, proportional to `.size`,
+// into the x/y/w/h box, always growing the current row along whichever side is currently shorter
+// and closing the row once adding another item would make its aspect ratios worse, not better.
+// Pure function: same input always produces the same layout, so it's straightforward to unit test.
+function squarify(sizes, x, y, w, h){
+  const items = sizes.filter(i=>i.size>0);
+  const total = items.reduce((s,i)=>s+i.size,0);
+  if(total<=0 || w<=0 || h<=0 || !items.length) return [];
+  const scale = (w*h)/total;
+  let rem = items.map(i=>({ref:i, area:i.size*scale}));
+  const out = [];
+  let bx=x, by=y, bw=w, bh=h;
+  function worst(row, side){
+    const sum = row.reduce((s,r)=>s+r.area,0);
+    if(sum<=0) return Infinity;
+    let maxA=-Infinity, minA=Infinity;
+    row.forEach(r=>{ if(r.area>maxA)maxA=r.area; if(r.area<minA)minA=r.area; });
+    const side2=side*side;
+    return Math.max((side2*maxA)/(sum*sum), (sum*sum)/(side2*minA));
+  }
+  while(rem.length){
+    const side = Math.min(bw,bh);
+    let row=[rem[0]], i=1;
+    while(i<rem.length){
+      const trial=row.concat(rem[i]);
+      if(worst(trial,side) <= worst(row,side)){ row=trial; i++; } else break;
+    }
+    const rowSum = row.reduce((s,r)=>s+r.area,0);
+    if(bw>=bh){
+      const colW = rowSum/bh;
+      let cy=by;
+      row.forEach(r=>{ const ih=r.area/colW; out.push({item:r.ref,x:bx,y:cy,w:colW,h:ih}); cy+=ih; });
+      bx+=colW; bw-=colW;
+    } else {
+      const rowH = rowSum/bw;
+      let cx=bx;
+      row.forEach(r=>{ const iw=r.area/rowH; out.push({item:r.ref,x:cx,y:by,w:iw,h:rowH}); cx+=iw; });
+      by+=rowH; bh-=rowH;
+    }
+    rem = rem.slice(row.length);
+  }
+  return out;
+}
+function getSizeMapTooltip(){
+  let t = document.getElementById("sizeMapTooltipEl");
+  if(!t){ t = document.createElement("div"); t.id = "sizeMapTooltipEl"; t.className = "sizemap-tooltip hidden"; document.body.appendChild(t); }
+  return t;
+}
+function showSizeMapDetail(item){
+  const panel = $("sizeMapDetail");
+  panel.classList.remove("hidden");
+  panel.innerHTML = detailInnerHtml(item, "sm");
+  wireDetailButtons(item, "sm", panel, ()=>{
+    panel.classList.add("hidden");
+    renderSizeMap();
+  });
+}
+function renderSizeMap(){
+  $("sizeMapDetail").classList.add("hidden");
+  const filtered = getBrowseFiltered();
+  const totalBytes = filtered.reduce((s,f)=>s+f.size,0);
+  const top = filtered.slice().sort((a,b)=>b.size-a.size).slice(0, SIZEMAP_MAX_TILES);
+  const topBytes = top.reduce((s,f)=>s+f.size,0);
+
+  $("browseMeta").textContent = filtered.length
+    ? `Showing the ${fmtNum(top.length)} largest of ${fmtNum(filtered.length)} files \u2014 ${fmtBytes(topBytes)} of ${fmtBytes(totalBytes)} filtered total`
+    : "No files match";
+
+  const legendCats = [...new Set(top.map(f=>f.category))];
+  $("sizeMapLegend").innerHTML = legendCats.map(c=>`<span><i style="background:${sizemapColor(c)}"></i>${escapeHtml(c)}</span>`).join("");
+
+  const svg = $("sizeMapSvg");
+  const NS = "http://www.w3.org/2000/svg";
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  if(!top.length){
+    const t = document.createElementNS(NS,"text");
+    t.setAttribute("x","500"); t.setAttribute("y","280"); t.setAttribute("text-anchor","middle");
+    t.setAttribute("fill","var(--text-low)"); t.setAttribute("font-size","18");
+    t.textContent = "Nothing to show";
+    svg.appendChild(t);
+    return;
+  }
+  const W=1000, H=560;
+  const tiles = squarify(top, 0, 0, W, H);
+  const frag = document.createDocumentFragment();
+  tiles.forEach(t=>{
+    const f = t.item;
+    const rect = document.createElementNS(NS,"rect");
+    rect.setAttribute("x", t.x.toFixed(2)); rect.setAttribute("y", t.y.toFixed(2));
+    rect.setAttribute("width", Math.max(0,t.w).toFixed(2)); rect.setAttribute("height", Math.max(0,t.h).toFixed(2));
+    rect.setAttribute("fill", sizemapColor(f.category));
+    rect.setAttribute("class","sizemap-tile");
+    rect.dataset.id = String(f.id);
+    frag.appendChild(rect);
+    if(t.w > 46 && t.h > 22){
+      const label = document.createElementNS(NS,"text");
+      label.setAttribute("x",(t.x+4).toFixed(2)); label.setAttribute("y",(t.y+15).toFixed(2));
+      label.setAttribute("font-size", Math.min(13, Math.max(9,t.h/5)).toFixed(1));
+      label.setAttribute("class","sizemap-tile-label");
+      const maxChars = Math.max(3, Math.floor(t.w/6)-1);
+      label.textContent = f.name.length > maxChars ? f.name.slice(0,maxChars)+"\u2026" : f.name;
+      frag.appendChild(label);
+      if(t.h > 34){
+        const sizeLabel = document.createElementNS(NS,"text");
+        sizeLabel.setAttribute("x",(t.x+4).toFixed(2)); sizeLabel.setAttribute("y",(t.y+27).toFixed(2));
+        sizeLabel.setAttribute("font-size","10"); sizeLabel.setAttribute("opacity","0.85");
+        sizeLabel.setAttribute("class","sizemap-tile-label");
+        sizeLabel.textContent = fmtBytes(f.size);
+        frag.appendChild(sizeLabel);
+      }
+    }
+  });
+  svg.appendChild(frag);
+
+  const tooltip = getSizeMapTooltip();
+  svg.querySelectorAll(".sizemap-tile").forEach(rect=>{
+    const f = top.find(x=>String(x.id)===rect.dataset.id);
+    if(!f) return;
+    rect.addEventListener("mousemove",(e)=>{
+      tooltip.style.left = (e.clientX+14)+"px"; tooltip.style.top = (e.clientY+14)+"px";
+      tooltip.classList.remove("hidden");
+      const srcName = state.sources[f.sourceIndex] ? state.sources[f.sourceIndex].name : "?";
+      tooltip.innerHTML = `<b>${escapeHtml(f.name)}</b><span>${escapeHtml(srcName)}/${escapeHtml(pathJoin(f.pathSegs,""))}</span><br><span>${fmtBytes(f.size)} \u00b7 ${escapeHtml(f.category)}</span>`;
+    });
+    rect.addEventListener("mouseleave", ()=>tooltip.classList.add("hidden"));
+    rect.addEventListener("click", ()=>showSizeMapDetail(f));
+  });
 }
 async function openPreview(item){
   try{
@@ -2094,7 +2482,7 @@ async function openPreview(item){
     const file = await handle.getFile();
     const url = URL.createObjectURL(file);
     window.open(url, "_blank");
-  }catch(e){ alert("Couldn't open a preview for this file."); }
+  }catch(e){ notify("Couldn't open a preview for this file.", {kind:"danger"}); }
 }
 // "Open & browse it": for a folder Undupe already organized. Skips the size/hash duplicate
 // pipeline entirely (there's nothing to de-duplicate in a clean archive) and goes straight to
@@ -2120,6 +2508,9 @@ async function openArchiveToBrowse(){
   state.errors = [];
   state.excludedCount = 0;
   state.cancelRequested = false;
+  resetCancelButton("cancelScanBtn", "Cancel scan");
+  activeOperation = true;
+  try{
 
   goToStep(2);
   $("phaseText").textContent = "Reading archive contents…";
@@ -2147,7 +2538,7 @@ async function openArchiveToBrowse(){
     } else {
       let file;
       try{ file = await withTimeout(entry.handle.getFile(), FILE_READ_TIMEOUT_MS, "getFile"); }
-      catch(e){ state.errors.push(`Could not read ${pathJoin(entry.pathSegs, entry.name)}`); continue; }
+      catch(e){ if(isCancelledError(e)) break readLoop; state.errors.push(`Could not read ${pathJoin(entry.pathSegs, entry.name)}`); continue; }
       const ext = getExt(entry.name);
       state.catalog.push({ id: state.catalog.length, sourceIndex: 0, pathSegs: entry.pathSegs, name: entry.name, ext,
         size: file.size, lastModified: file.lastModified, category: categorize(ext) });
@@ -2180,20 +2571,35 @@ async function openArchiveToBrowse(){
     statusHtml = `<span>&#8505;&#65039;</span><span>No Undupe catalog file found in this folder — showing a fresh read of what's here now.</span>`;
   }
   openBrowseOverlay(statusHtml);
+  } finally { activeOperation = false; }
 }
 $("openArchiveBtn").addEventListener("click", openArchiveToBrowse);
 
-function openBrowseOverlay(statusHtml){
+function openBrowseOverlay(statusHtml, startView){
   browsePage = 0;
   $("browseSearchInput").value = "";
   $("browseCategoryFilter").value = "";
   $("browseSortSelect").value = "name-asc";
   $("archiveStatusNote").classList.toggle("hidden", !statusHtml);
   $("archiveStatusNote").innerHTML = statusHtml || "";
-  renderBrowseTable();
   $("browseOverlay").classList.remove("hidden");
+  switchBrowseView(startView || "list");
 }
 $("browseFilesBtn").addEventListener("click", ()=>openBrowseOverlay());
+function switchBrowseView(view){
+  state.browseView = view;
+  $("viewListBtn").className = "btn btn-sm " + (view === "list" ? "btn-primary" : "btn-ghost");
+  $("viewSizeMapBtn").className = "btn btn-sm " + (view === "sizemap" ? "btn-primary" : "btn-ghost");
+  $("listViewWrap").classList.toggle("hidden", view !== "list");
+  $("sizeMapWrap").classList.toggle("hidden", view !== "sizemap");
+  renderCurrentBrowseView();
+}
+function renderCurrentBrowseView(){
+  if(state.browseView === "sizemap") renderSizeMap(); else renderBrowseTable();
+}
+$("viewListBtn").addEventListener("click", ()=>switchBrowseView("list"));
+$("viewSizeMapBtn").addEventListener("click", ()=>switchBrowseView("sizemap"));
+
 async function indexPhotoDates(){
   const btn = $("indexDatesBtn");
   const todo = state.catalog.filter(it=>isJpeg(it) && !it.exifDone);
@@ -2215,16 +2621,16 @@ async function indexPhotoDates(){
   btn.disabled = false;
   btn.textContent = "Read photo dates";
   idbSet("catalog", state.catalog).catch(()=>{});
-  renderBrowseTable();
+  renderCurrentBrowseView();
 }
 $("indexDatesBtn").addEventListener("click", indexPhotoDates);
-$("closeBrowseBtn").addEventListener("click", ()=>{ $("browseOverlay").classList.add("hidden"); });
+$("closeBrowseBtn").addEventListener("click", ()=>{ $("browseOverlay").classList.add("hidden"); getSizeMapTooltip().classList.add("hidden"); });
 $("browseSearchInput").addEventListener("input", ()=>{
   clearTimeout(browseSearchDebounce);
-  browseSearchDebounce = setTimeout(()=>{ browsePage=0; renderBrowseTable(); }, 150);
+  browseSearchDebounce = setTimeout(()=>{ browsePage=0; renderCurrentBrowseView(); }, 150);
 });
-$("browseCategoryFilter").addEventListener("change", ()=>{ browsePage=0; renderBrowseTable(); });
-$("browseSortSelect").addEventListener("change", ()=>{ browsePage=0; renderBrowseTable(); });
+$("browseCategoryFilter").addEventListener("change", ()=>{ browsePage=0; renderCurrentBrowseView(); });
+$("browseSortSelect").addEventListener("change", ()=>{ browsePage=0; renderCurrentBrowseView(); });
 $("browsePrevBtn").addEventListener("click", ()=>{ browsePage=Math.max(0,browsePage-1); renderBrowseTable(); });
 $("browseNextBtn").addEventListener("click", ()=>{ browsePage++; renderBrowseTable(); });
 function rerenderSingleGroup(gi, el, group){
@@ -2442,9 +2848,25 @@ $("startMigrateBtn").addEventListener("click", ()=>{
   $("migrateProgressPanel").classList.remove("hidden");
   runMigration();
 });
-$("cancelMigrateBtn").addEventListener("click", ()=>{ state.cancelRequested = true; });
+$("cancelMigrateBtn").addEventListener("click", async ()=>{
+  const sure = await confirmToast({
+    title: "Stop copying?",
+    message: "Files already copied stay right where they are. Nothing already written gets undone.",
+    confirmLabel: "Stop",
+    cancelLabel: "Keep going",
+    danger: true
+  });
+  if(!sure) return;
+  $("cancelMigrateBtn").disabled = true;
+  $("cancelMigrateBtn").textContent = "Stopping\u2026";
+  state.cancelRequested = true;
+  triggerCancelSignal();
+});
 
 async function runMigration(){
+  resetCancelButton("cancelMigrateBtn", "Cancel");
+  activeOperation = true;
+  try{
   state.cancelRequested = false;
   state.skippedAlreadyPresent = 0;
   const keepItems = getKeepItems();
@@ -2544,6 +2966,7 @@ async function runMigration(){
 
   await writeOutputCatalog(manifest);
   showDone(done, bytesDone, migrateErrors.length);
+  } finally { activeOperation = false; }
 }
 
 // Writes a small sidecar file to the organized folder listing what's there (path, size, date, type).
@@ -2693,7 +3116,7 @@ async function tryLoadResumeState(){
     $("resumeBanner").classList.add("hidden");
 
     if(!ok){
-      alert("Some folders couldn't be re-accessed (they may have been moved or renamed). Please re-add them.");
+      notify("Some folders couldn't be re-accessed (they may have been moved or renamed). Please re-add them.", {kind:"danger", duration:7000});
       return;
     }
 
@@ -2760,7 +3183,31 @@ function initPWA(){
 
   if(!("serviceWorker" in navigator) || !/^https?:$/.test(location.protocol)) return;
   let updateRequested = false, waitingWorker = null;
-  const offer = (worker)=>{ waitingWorker = worker; $("updateToast").classList.remove("hidden"); };
+  const offer = (worker)=>{
+    waitingWorker = worker;
+    renderToast({
+      message: "A new version of Undupe is ready.",
+      actions: [
+        {label:"Later", variant:"ghost"},
+        {label:"Reload to update", variant:"primary", onClick: async ()=>{
+          // Never reload on its own: a scan or migration may be running. Only reload after the user asks,
+          // and if one is genuinely in progress, confirm again since updating stops it partway through.
+          if(isBusy()){
+            const sure = await confirmToast({
+              title: "A scan or migration is running",
+              message: "Updating now will stop it partway through. Update anyway?",
+              confirmLabel: "Update anyway",
+              cancelLabel: "Wait",
+              danger: true
+            });
+            if(!sure) return;
+          }
+          updateRequested = true;
+          if(waitingWorker) waitingWorker.postMessage("SKIP_WAITING");
+        }}
+      ]
+    });
+  };
   navigator.serviceWorker.register("sw.js").then(reg=>{
     if(reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
     reg.addEventListener("updatefound", ()=>{
@@ -2771,13 +3218,6 @@ function initPWA(){
       });
     });
   }).catch(()=>{ /* offline support is optional; the app still works online */ });
-  // Never reload on its own: a scan or migration may be running. Only reload after the user asks.
-  $("updateNowBtn").addEventListener("click", ()=>{
-    if(isBusy() && !confirm("A scan or migration is running. Updating now will stop it. Update anyway?")) return;
-    updateRequested = true;
-    if(waitingWorker) waitingWorker.postMessage("SKIP_WAITING");
-  });
-  $("updateLaterBtn").addEventListener("click", ()=>{ $("updateToast").classList.add("hidden"); });
   navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(updateRequested) location.reload(); });
 }
 
