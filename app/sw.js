@@ -7,7 +7,7 @@
  * The app will then show a "Reload to update" prompt (it never reloads by itself,
  * because a scan or migration might be running).
  */
-const VERSION = 'v1.1';
+const VERSION = '1.0'; // keep this in sync with APP_VERSION in app/index.html — same string, both places
 const CACHE = 'undupe-' + VERSION;
 const SHELL = [
   'index.html',
