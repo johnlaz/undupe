@@ -763,6 +763,16 @@
             <div class="rr-desc" style="margin-top:10px;">Any folder whose path contains this text is skipped entirely &mdash; matched anywhere, so "OneDrive" also catches subfolders inside it. Handy for cloud-synced drives (OneDrive, Dropbox, iCloud Drive): files that haven't finished downloading can stall a scan for a long time while the browser waits on them.</div>
           </div>
 
+          <div style="height:26px;"></div>
+          <div class="section-label">Keep these folders exactly as-is <span style="color:var(--text-low);font-weight:400;">&mdash; optional, one per line</span></div>
+          <div class="option-card">
+            <div style="margin-bottom:10px;">
+              <button type="button" id="pickProtectedFolderBtn" class="btn btn-ghost btn-sm">+ Browse for a folder to protect</button>
+            </div>
+            <textarea id="protectedInput" class="bare" rows="3" placeholder="e.g.&#10;Work Contracts&#10;Legal"></textarea>
+            <div class="rr-desc" style="margin-top:10px;">Any folder whose path contains this text is copied over completely, exactly as it is &mdash; never opened up, sorted into type folders, or checked against other files for duplicates. It lands in a "Protected" folder in your organized output, in the same relative place it started. If a folder matches both this and your skip list above, skipping wins.</div>
+          </div>
+
           <div id="overlapWarning" class="warn-note hidden" style="margin-top:20px;"></div>
 
           <div class="footer-row split">
@@ -1152,6 +1162,7 @@ const state = {
   thumbPending: new Map(), // elementId -> item, for thumbnails not yet scrolled into view
   clones: [],
   excludePatterns: [],
+  protectedPatterns: [],
   browseView: "list",
   exifCache: new Map(),
   skippedAlreadyPresent: 0
@@ -1201,13 +1212,25 @@ function isExcludedPath(name, pathSegs){
   const full = (pathJoin(pathSegs, name)).toLowerCase();
   return state.excludePatterns.some(p => full.indexOf(p) !== -1);
 }
+// A protected folder is copied over whole — never walked into, split apart, sorted by type, or
+// checked against other files for duplicates — the same treatment a recognized bundle (.app,
+// .photoslibrary) already gets, just user-designated instead of detected by extension. Checked
+// after excludes, so a folder that matches both your skip list and your protect list gets skipped
+// (the more definitive instruction wins).
+function isProtectedPath(name, pathSegs){
+  if(!state.protectedPatterns.length) return false;
+  const full = (pathJoin(pathSegs, name)).toLowerCase();
+  return state.protectedPatterns.some(p => full.indexOf(p) !== -1);
+}
 async function* walkDirectory(dirHandle, sourceIndex, pathSegs){
   pathSegs = pathSegs || [];
   for await (const [name, handle] of dirHandle.entries()){
     if(name.startsWith(".") || SKIP_NAMES.has(name)) continue;
     if(isExcludedPath(name, pathSegs)){ state.excludedCount = (state.excludedCount||0) + 1; continue; }
     if(handle.kind === "directory"){
-      if(isBundleDir(name)){
+      if(isProtectedPath(name, pathSegs)){
+        yield {bundle:true, isProtected:true, handle, sourceIndex, pathSegs, name};
+      } else if(isBundleDir(name)){
         yield {bundle:true, handle, sourceIndex, pathSegs, name};
       } else {
         yield* walkDirectory(handle, sourceIndex, [...pathSegs, name]);
@@ -1617,7 +1640,7 @@ function updateBeginScanEnabled(){
 // anything here mid-run isn't, so the controls lock themselves for that window instead.
 function syncSetupInteractivity(){
   const locked = activeOperation;
-  ["addSourceBtn","pickTargetBtn","pickExcludeFolderBtn","excludeInput","openArchiveBtn"].forEach(id=>{
+  ["addSourceBtn","pickTargetBtn","pickExcludeFolderBtn","excludeInput","pickProtectedFolderBtn","protectedInput","openArchiveBtn"].forEach(id=>{
     const el = $(id); if(el) el.disabled = locked;
   });
   document.querySelectorAll("#sourceList .remove-btn, #targetRow .remove-btn").forEach(b=>{ b.disabled = locked; });
@@ -1662,7 +1685,7 @@ document.querySelectorAll('input[name="dupRule"]').forEach(radio=>{
 });
 
 function persistSettings(){
-  idbSet("settings", {dupRule: state.dupRule, mode: state.mode, excludeText: $("excludeInput").value});
+  idbSet("settings", {dupRule: state.dupRule, mode: state.mode, excludeText: $("excludeInput").value, protectedText: $("protectedInput").value});
 }
 // Shared by the manual textarea, the folder-picker button, and "Skip this file/folder" in the
 // detail panel — one place that actually owns writing to state.excludePatterns + the textarea.
@@ -1703,6 +1726,42 @@ $("pickExcludeFolderBtn").addEventListener("click", async ()=>{
     ? `Added "${pattern}" to your skip list.`
     : `Added "${pattern}" to your skip list — it isn't inside a source you've added yet, so this will match any folder with that name.`,
     {duration: matched ? 4000 : 7000});
+});
+// Same idea as the exclude list above, but the opposite intent: this folder isn't left out, it's
+// carried over completely, untouched, instead of being scanned/sorted like everything else.
+function addProtectedPattern(pattern){
+  pattern = (pattern||"").trim();
+  if(!pattern) return false;
+  const lower = pattern.toLowerCase();
+  if(state.protectedPatterns.includes(lower)) return false;
+  state.protectedPatterns.push(lower);
+  const ta = $("protectedInput");
+  ta.value = ta.value.trim() ? (ta.value.replace(/\n+$/,"") + "\n" + pattern) : pattern;
+  persistSettings();
+  return true;
+}
+let protectedSaveTimer = null;
+$("protectedInput").addEventListener("input", (e)=>{
+  state.protectedPatterns = e.target.value.split("\n").map(s=>s.trim().toLowerCase()).filter(Boolean);
+  clearTimeout(protectedSaveTimer);
+  protectedSaveTimer = setTimeout(persistSettings, 400);
+});
+$("pickProtectedFolderBtn").addEventListener("click", async ()=>{
+  let handle;
+  try{ handle = await window.showDirectoryPicker({mode:"read"}); }catch(e){ return; }
+  let pattern = handle.name, matched = false;
+  for(const s of state.sources){
+    try{
+      const rel = await s.handle.resolve(handle);
+      if(rel && rel.length){ pattern = rel.join("/"); matched = true; break; }
+    }catch(e){ /* unrelated handle, or resolve unsupported here — fall back to the name */ }
+  }
+  const added = addProtectedPattern(pattern);
+  if(!added){ notify(`"${pattern}" is already protected.`, {duration:4000}); return; }
+  notify(matched
+    ? `"${pattern}" will be copied over exactly as it is, kept out of sorting and duplicate checking.`
+    : `"${pattern}" is now protected — it isn't inside a source you've added yet, so this will match any folder with that name.`,
+    {duration: matched ? 5500 : 7500});
 });
 
 $("modeToggle").addEventListener("change", (e)=>{
@@ -1818,8 +1877,9 @@ async function catalogAllSources(checkpoint){
           ext: getExt(entry.name),
           size: info.size,
           lastModified: info.lastModified || Date.now(),
-          category: "Bundles & Projects",
+          category: entry.isProtected ? "Protected" : "Bundles & Projects",
           isBundle: true,
+          isProtected: !!entry.isProtected,
           innerFileCount: info.count
         });
         count++; bytes += info.size;
@@ -2436,7 +2496,7 @@ function detailInnerHtml(item, idPrefix){
     <div><strong>Modified:</strong> ${new Date(item.lastModified).toLocaleString()}</div>
     <div><strong>Type:</strong> ${escapeHtml(item.category)}${item.ext ? " \u00b7 ." + escapeHtml(item.ext) : ""}</div>
     ${item.isBundle ? `<div><strong>Contains:</strong> ${fmtNum(item.innerFileCount||0)} files inside</div>` : ""}
-    ${item.keepAsIs ? `<div class="asis-badge"><span>&#128193;</span><span>Will be copied as-is, keeping its original folder structure \u2014 not sorted into ${escapeHtml(item.category)}.</span></div>` : ""}
+    ${item.isProtected ? `<div class="asis-badge"><span>&#128737;&#65039;</span><span>Protected: copied over completely, exactly as it is \u2014 never opened up, sorted, or checked for duplicates.</span></div>` : item.keepAsIs ? `<div class="asis-badge"><span>&#128193;</span><span>Will be copied as-is, keeping its original folder structure \u2014 not sorted into ${escapeHtml(item.category)}.</span></div>` : ""}
     <div id="${idPrefix}-exif-${item.id}"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
       <button class="btn btn-ghost btn-sm" id="${idPrefix}-copypath-${item.id}" title="Browsers can't open your file manager directly, and don't share your drive's real folder path with websites — this copies the path relative to what you picked instead.">Copy path</button>
@@ -3064,7 +3124,7 @@ function renderMigratePreview(){
     tile.innerHTML = `<div class="cat-name">${cat}</div><div class="cat-count">${fmtNum(byCat[cat].count)}</div><div class="cat-size">${fmtBytes(byCat[cat].size)}</div>`;
     grid.appendChild(tile);
   });
-  const bundleCount = keep.filter(i=>i.isBundle).length;
+  const bundleCount = keep.filter(i=>i.isBundle && !i.isProtected).length;
   let bundleNoteEl = document.getElementById("bundleNote");
   if(bundleCount > 0){
     if(!bundleNoteEl){
@@ -3076,6 +3136,19 @@ function renderMigratePreview(){
     bundleNoteEl.innerHTML = `<span>&#128230;</span><span>${fmtNum(bundleCount)} app/project folder(s) detected (like .app or .photoslibrary bundles) &mdash; these are copied whole into "Bundles &amp; Projects" and never split apart or deduped internally.</span>`;
   } else if(bundleNoteEl){
     bundleNoteEl.remove();
+  }
+  const protectedCount = keep.filter(i=>i.isProtected).length;
+  let protectedNoteEl = document.getElementById("protectedNote");
+  if(protectedCount > 0){
+    if(!protectedNoteEl){
+      protectedNoteEl = document.createElement("div");
+      protectedNoteEl.id = "protectedNote";
+      protectedNoteEl.className = "bundle-note";
+      grid.parentElement.insertBefore(protectedNoteEl, grid);
+    }
+    protectedNoteEl.innerHTML = `<span>&#128737;&#65039;</span><span>${fmtNum(protectedCount)} protected folder(s) &mdash; copied over completely into a "Protected" folder, keeping their exact structure. Never split apart, sorted, or checked for duplicates.</span>`;
+  } else if(protectedNoteEl){
+    protectedNoteEl.remove();
   }
   const asIsCount = keep.filter(i=>i.keepAsIs && !i.isBundle).length;
   let asIsNoteEl = document.getElementById("asIsNote");
@@ -3151,12 +3224,28 @@ async function runMigration(){
   function asIsRelPath(item, finalName){
     return ["As-Is", state.sources[item.sourceIndex].name, ...item.pathSegs, finalName].join("/");
   }
+  // A protected folder's destination: same idea as As-Is, but rooted at Protected/ instead, and
+  // this is the PARENT the whole folder gets copied into as one atomic unit (via the same
+  // resolveBundleDestination/copyDirectoryRecursive path a regular bundle already uses) — it's
+  // never split into individual files, so there's no per-file destination to compute here.
+  async function protectedDir(item){
+    const key = "protected:" + item.sourceIndex + ":" + item.pathSegs.join("/");
+    if(dirCache.has(key)) return dirCache.get(key);
+    let dir = await getOrCreateDir(state.target.handle, "Protected");
+    dir = await getOrCreateDir(dir, state.sources[item.sourceIndex].name);
+    for(const seg of item.pathSegs) dir = await getOrCreateDir(dir, seg);
+    dirCache.set(key, dir);
+    return dir;
+  }
+  function protectedRelPath(item, finalName){
+    return ["Protected", state.sources[item.sourceIndex].name, ...item.pathSegs, finalName].join("/");
+  }
 
   for(const item of keepItems){
     if(state.cancelRequested) break;
     try{
       const asIs = !!item.keepAsIs && !item.isBundle;
-      const catDirHandle = asIs ? await asIsDir(item) : await catDir(item.category);
+      const catDirHandle = item.isProtected ? await protectedDir(item) : (asIs ? await asIsDir(item) : await catDir(item.category));
 
       if(item.isBundle){
         const parentDir = await resolveDirHandle(item.sourceIndex, item.pathSegs);
@@ -3171,7 +3260,7 @@ async function runMigration(){
             catch(e){ migrateErrors.push(`Copied but couldn't remove original bundle: ${pathJoin(item.pathSegs,item.name)}`); }
           }
           bytesDone += item.size;
-          manifest.push({path: item.category+"/"+dest.name, size: item.size, lastModified: item.lastModified, category: item.category, isBundle: true, innerFileCount: item.innerFileCount||0});
+          manifest.push({path: item.isProtected ? protectedRelPath(item, dest.name) : item.category+"/"+dest.name, size: item.size, lastModified: item.lastModified, category: item.category, isBundle: true, innerFileCount: item.innerFileCount||0});
         } else if(result.completed){
           migrateErrors.push(`${result.failed} file(s) inside ${pathJoin(item.pathSegs,item.name)} didn't copy cleanly \u2014 original bundle was left untouched`);
         } else {
@@ -3381,6 +3470,8 @@ async function tryLoadResumeState(){
       state.dupRule = settings.dupRule || "newest"; state.mode = settings.mode || "copy";
       $("excludeInput").value = settings.excludeText || "";
       state.excludePatterns = (settings.excludeText||"").split("\n").map(s=>s.trim().toLowerCase()).filter(Boolean);
+      $("protectedInput").value = settings.protectedText || "";
+      state.protectedPatterns = (settings.protectedText||"").split("\n").map(s=>s.trim().toLowerCase()).filter(Boolean);
       syncSettingsUI();
     }
 
