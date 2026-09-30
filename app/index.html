@@ -1001,7 +1001,7 @@ const CATALOG_FILE_NAME = "undupe-catalog.json"; // sidecar manifest written to 
 // Bump this on every shipped change, and keep sw.js's VERSION in sync with it — that's what makes
 // the visible stamp in the header actually mean something (a real cache/content change), not just
 // a cosmetic label that could go stale on its own.
-const APP_VERSION = "1.2";
+const APP_VERSION = "1.3";
 function withTimeout(promise, ms, label){
   let timer;
   const timeout = new Promise((_,reject)=>{ timer = setTimeout(()=>reject(new Error("timeout:"+(label||""))), ms); });
@@ -1227,7 +1227,7 @@ function isProtectedPath(name, pathSegs){
 async function* walkDirectory(dirHandle, sourceIndex, pathSegs){
   pathSegs = pathSegs || [];
   for await (const [name, handle] of dirHandle.entries()){
-    if(name.startsWith(".") || SKIP_NAMES.has(name)) continue;
+    if(name.startsWith(".") || SKIP_NAMES.has(name)){ state.junkSkippedCount = (state.junkSkippedCount||0) + 1; continue; }
     if(isExcludedPath(name, pathSegs)){ state.excludedCount = (state.excludedCount||0) + 1; continue; }
     if(handle.kind === "directory"){
       if(isProtectedPath(name, pathSegs)){
@@ -1942,6 +1942,7 @@ async function runScan(){
   state.errors = [];
   state.catalog = [];
   state.excludedCount = 0;
+  state.junkSkippedCount = 0;
   state.scanStartedAt = Date.now();
   log("Scan started" + (state.excludePatterns.length ? ` (excluding: ${state.excludePatterns.join(", ")})` : ""));
   setPhase("Cataloging files\u2026", true, 1);
@@ -1955,7 +1956,7 @@ async function runScan(){
   }
 
   updateBrowseButtonVisibility();
-  log(`Cataloged ${state.catalog.length} files (${fmtBytes(result.bytes)})` + (state.excludedCount ? ` \u2014 ${state.excludedCount} skipped by your exclude list` : ""));
+  log(`Cataloged ${state.catalog.length} files (${fmtBytes(result.bytes)})` + (state.excludedCount ? ` \u2014 ${state.excludedCount} skipped by your exclude list` : "") + (state.junkSkippedCount ? ` \u2014 ${state.junkSkippedCount} system/hidden items ignored` : ""));
 
   await runHashPhases();
   } finally { setActiveOperation(false); }
@@ -1976,6 +1977,7 @@ async function runQuickScan(){
   state.duplicateGroups = [];
   state.clones = [];
   state.excludedCount = 0;
+  state.junkSkippedCount = 0;
   state.scanStartedAt = Date.now();
   log("Quick scan started" + (state.excludePatterns.length ? ` (excluding: ${state.excludePatterns.join(", ")})` : ""));
   setPhase("Reading file sizes\u2026", true);
@@ -1990,7 +1992,7 @@ async function runQuickScan(){
   }
 
   updateBrowseButtonVisibility();
-  log(`Quick scan cataloged ${state.catalog.length} files (${fmtBytes(result.bytes)})`);
+  log(`Quick scan cataloged ${state.catalog.length} files (${fmtBytes(result.bytes)})` + (state.excludedCount ? ` \u2014 ${state.excludedCount} skipped by your exclude list` : "") + (state.junkSkippedCount ? ` \u2014 ${state.junkSkippedCount} system/hidden items ignored` : ""));
   openBrowseOverlay(null, "sizemap");
   } finally { setActiveOperation(false); }
 }
@@ -2802,6 +2804,7 @@ async function openArchiveToBrowse(){
   state.clones = [];
   state.errors = [];
   state.excludedCount = 0;
+  state.junkSkippedCount = 0;
   state.cancelRequested = false;
   resetCancelButton("cancelScanBtn", "Cancel scan");
   setActiveOperation(true);
@@ -3404,9 +3407,12 @@ function showDone(filesOrganized, bytesWritten, errorCount){
   } else {
     $("doneErrorNote").classList.add("hidden");
   }
-  if(state.skippedAlreadyPresent > 0){
+  if(state.skippedAlreadyPresent > 0 || state.junkSkippedCount > 0){
+    const infoNotes = [];
+    if(state.skippedAlreadyPresent > 0) infoNotes.push(`${fmtNum(state.skippedAlreadyPresent)} file(s) were already in place from a previous run and were left untouched`);
+    if(state.junkSkippedCount > 0) infoNotes.push(`${fmtNum(state.junkSkippedCount)} system/hidden item(s) (like Thumbs.db, .git, or dotfiles) were automatically ignored`);
     $("doneInfoNote").classList.remove("hidden");
-    $("doneInfoNote").innerHTML = `<span>&#8635;</span><span>${fmtNum(state.skippedAlreadyPresent)} file(s) were already in place from a previous run and were left untouched.</span>`;
+    $("doneInfoNote").innerHTML = `<span>&#8635;</span><span>${infoNotes.join(". ")}.</span>`;
   } else {
     $("doneInfoNote").classList.add("hidden");
   }
