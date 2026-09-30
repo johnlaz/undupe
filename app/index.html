@@ -1001,7 +1001,7 @@ const CATALOG_FILE_NAME = "undupe-catalog.json"; // sidecar manifest written to 
 // Bump this on every shipped change, and keep sw.js's VERSION in sync with it — that's what makes
 // the visible stamp in the header actually mean something (a real cache/content change), not just
 // a cosmetic label that could go stale on its own.
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.2";
 function withTimeout(promise, ms, label){
   let timer;
   const timeout = new Promise((_,reject)=>{ timer = setTimeout(()=>reject(new Error("timeout:"+(label||""))), ms); });

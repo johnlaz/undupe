@@ -2,7 +2,6 @@
   "name": "Undupe",
   "short_name": "Undupe",
   "description": "Find exact duplicate files across years of backups, keep the copy you want, and organize the rest. Runs entirely in your browser.",
-  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
