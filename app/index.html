@@ -257,6 +257,18 @@
   .rail-step.done{border-color:rgba(var(--success-rgb),0.5);color:var(--success);background:rgba(var(--success-rgb),0.1);}
   .rail-step.clickable{cursor:pointer;transition:transform .12s,box-shadow .12s;}
   .rail-step.clickable:hover{transform:scale(1.08);box-shadow:0 0 0 4px rgba(var(--accent-rgb),0.16);}
+  /* Locked stages: still clickable (opens a read-only preview), just visibly not yet reachable */
+  .rail-step.locked{position:relative;opacity:0.6;border-style:dashed;}
+  .rail-step.locked::after{content:"\1F512";position:absolute;right:-5px;bottom:-5px;font-size:11px;line-height:1;filter:saturate(0.8);}
+  .rail-step.previewing{border-style:dashed;border-color:var(--accent-bright);color:var(--accent-bright);opacity:1;box-shadow:0 0 0 4px rgba(var(--accent-rgb),0.16);}
+  .mobile-stepper .chip.locked{opacity:0.6;border-style:dashed;}
+  .mobile-stepper .chip.previewing{border-style:dashed;border-color:var(--accent-bright);color:var(--accent-bright);opacity:1;}
+  .preview-cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:6px;}
+  @media (max-width:720px){ .preview-cols{grid-template-columns:1fr;} }
+  .preview-list{margin:0;padding-left:18px;color:var(--text-mid);font-size:0.86rem;line-height:1.55;}
+  .preview-list li{margin-bottom:6px;}
+  .preview-status{display:flex;gap:10px;align-items:flex-start;margin-bottom:18px;padding:12px 14px;border-radius:var(--radius-sm);font-size:0.82rem;color:var(--text-mid);background:rgba(var(--accent-rgb),0.07);border:1px solid rgba(var(--accent-rgb),0.24);}
+  .preview-status.done{background:rgba(var(--success-rgb),0.08);border-color:rgba(var(--success-rgb),0.35);}
   .mobile-stepper .chip.clickable{cursor:pointer;}
   .mobile-stepper .chip.clickable:hover{border-color:var(--accent-bright);}
   .rail-line{width:1px;height:22px;background:var(--border-glass-hi);}
@@ -910,6 +922,11 @@
         </div>
       </section>
 
+      <!-- ================= PREVIEW (read-only look at a locked step) ================= -->
+      <section class="step-view hidden" id="viewPreview">
+        <div class="panel" id="previewPanel"></div>
+      </section>
+
     </div>
   </div>
 </div>
@@ -1004,7 +1021,7 @@ const CATALOG_FILE_NAME = "undupe-catalog.json"; // sidecar manifest written to 
 // Bump this on every shipped change, and keep sw.js's VERSION in sync with it — that's what makes
 // the visible stamp in the header actually mean something (a real cache/content change), not just
 // a cosmetic label that could go stale on its own.
-const APP_VERSION = "1.3.1";
+const APP_VERSION = "1.4.0";
 function withTimeout(promise, ms, label){
   let timer;
   const timeout = new Promise((_,reject)=>{ timer = setTimeout(()=>reject(new Error("timeout:"+(label||""))), ms); });
@@ -1503,6 +1520,12 @@ $("themeToggleBtn").addEventListener("click", ()=>{
 /* ============================================================
    RAIL / STEPPER
    ============================================================ */
+let previewStep = null; // a locked step being looked at read-only; currentStep always stays the REAL step so busy-checks etc. never get confused
+function isStepOpen(n){
+  // Setup is always open. The scan screen is only "open" while something is actually running.
+  // Everything else opens once you've truly reached it this session.
+  return n === 1 || (n === 2 ? activeOperation : n <= furthestStep);
+}
 function renderRail(){
   const rail = $("rail");
   const mobile = $("mobileStepper");
@@ -1510,19 +1533,31 @@ function renderRail(){
   mobile.innerHTML = "";
   STEPS.forEach((label, i)=>{
     const n = i+1;
+    const open = isStepOpen(n);
+    const isPreview = previewStep === n;
+    const isCurrent = previewStep === null && n === currentStep;
     // "done" reflects steps you've truly reached, not just steps numerically before wherever
     // you're currently peeking — so clicking back to review step 1 doesn't make steps 2/3/4 look
     // unfinished when they aren't.
-    const state_ = n === currentStep ? "active" : (n <= furthestStep ? "done" : "");
-    // Step 2 (Scanning) never becomes a permanent "reached" step — it's a live progress screen,
-    // not something with lasting data to review — but it's worth clicking back to WHILE something
-    // is actually running, to check on progress, which is exactly when activeOperation is true.
-    const reachable = n !== currentStep && (n === 2 ? activeOperation : n <= furthestStep);
+    const state_ = isPreview ? "previewing" : (isCurrent ? "active" : (n <= furthestStep ? "done" : ""));
+    // Every step is clickable except the one already on screen. Reached steps navigate normally;
+    // steps you haven't reached open a read-only preview instead, so nobody has to walk the whole
+    // flow to find out what it asks for or what it does.
+    const clickable = !isPreview && !isCurrent;
+    const locked = !open && !(n === 2 && furthestStep >= 3); // a finished scan isn't "locked", just no longer live
+    const cls = state_ + (clickable ? " clickable" : "") + (locked ? " locked" : "");
+    const go = ()=>{ open ? goToStep(n) : openStepPreview(n); };
+    const tip = isPreview ? label + " — previewing"
+      : (!clickable ? label
+      : (open ? label + " — click to view"
+      : (locked ? label + " — locked until earlier steps are done. Click to preview"
+                : label + " — scan finished. Click to see what it did")));
     const el = document.createElement("div");
-    el.className = "rail-step " + state_ + (reachable ? " clickable" : "");
+    el.className = "rail-step " + cls;
     el.textContent = n;
-    el.title = reachable ? label + " — click to view" : label;
-    if(reachable) el.addEventListener("click", ()=>goToStep(n));
+    el.title = tip;
+    el.setAttribute("aria-label", tip);
+    if(clickable) el.addEventListener("click", go);
     rail.appendChild(el);
     if(n < STEPS.length){
       const line = document.createElement("div");
@@ -1530,14 +1565,17 @@ function renderRail(){
       rail.appendChild(line);
     }
     const chip = document.createElement("div");
-    chip.className = "chip " + state_ + (reachable ? " clickable" : "");
-    chip.textContent = `${n}. ${label}`;
-    if(reachable) chip.addEventListener("click", ()=>goToStep(n));
+    chip.className = "chip " + cls;
+    chip.textContent = (locked ? "\u{1F512} " : "") + `${n}. ${label}`;
+    chip.title = tip;
+    if(clickable) chip.addEventListener("click", go);
     mobile.appendChild(chip);
   });
 }
 function applyStep(n){
   currentStep = n;
+  previewStep = null;
+  $("viewPreview").classList.add("hidden");
   if(n !== 1) $("resumeBanner").classList.add("hidden");
   for(let i=1;i<=5;i++){
     $("view"+i).classList.toggle("hidden", i !== n);
@@ -1550,6 +1588,119 @@ function applyStep(n){
   if(n === 1) syncSetupInteractivity();
   if(n === 3) renderDuplicateGroups();
   if(n === 4) renderMigratePreview();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+/* ---------- Read-only previews of steps you haven't reached yet ----------
+   Purely static: never reads or writes scan state, so it can't disturb a running scan/migration. */
+const STEP_PREVIEWS = {
+  2: {
+    title: "Scan",
+    unlock: "you choose at least one source folder and an output folder in Setup and press Begin scan",
+    sub: "Reads your source folders and works out which files are exact duplicates.",
+    does: [
+      "Catalogs every file in your source folders (names, sizes, dates)",
+      "Compares sizes, fingerprints only the files that could match, then confirms exact matches byte for byte",
+      "Runs in the background: leave the tab open and look around, or cancel at any time",
+      "Saves a checkpoint every 2,500 files in case you close the tab"
+    ],
+    needs: [
+      "At least one source folder",
+      "An output folder (a full scan needs one; Quick scan only needs a source)",
+      "Your browser's permission to read the folders you pick"
+    ],
+    writes: "Nothing is written to your drives. The scan is read-only."
+  },
+  3: {
+    title: "Review duplicates",
+    unlock: "a full scan finishes",
+    sub: "Shows every group of identical files so you can see what would be kept.",
+    does: [
+      "Lists exact byte-for-byte duplicate groups, never guesses from file names",
+      "Flags folder clones: whole folders that already exist somewhere else",
+      "Applies your keep rule from Setup (newest, oldest, or let me choose) and lets you override any group"
+    ],
+    needs: [
+      "A finished full scan, nothing else",
+      "No extra information is asked for here"
+    ],
+    writes: "Reviewing copies and moves nothing. (The Browse view can permanently delete a file, but only if you choose to.)"
+  },
+  4: {
+    title: "Organize into your clean folder",
+    unlock: "you've reviewed the duplicates and continued",
+    sub: "Sorts the files you're keeping into your output folder, by type.",
+    does: [
+      "Shows counts per type (Photos, Videos, Audio, Documents, Bundles & Projects, Other) before anything is written",
+      "Skips a file if the same name with identical content is already in that output folder",
+      "Copy leaves your originals alone; Move deletes each original only after it's safely copied"
+    ],
+    needs: [
+      "The output folder you picked in Setup, with read and write permission",
+      "Enough free space on that drive for the files being kept"
+    ],
+    writes: "Nothing is written until you press Start migration."
+  },
+  5: {
+    title: "Done",
+    unlock: "the migration finishes",
+    sub: "A summary of what was organized.",
+    does: [
+      "Totals for files organized, duplicates skipped, and space reclaimed",
+      "A closer look by type, by year, and your biggest duplicate groups",
+      "Download a session log, or start a new scan"
+    ],
+    needs: [
+      "Nothing. No further steps or information are asked for here"
+    ],
+    writes: "A catalog of what was written is saved in your output folder so the archive can be reopened later without rescanning."
+  }
+};
+function renderPreviewPanel(n){
+  const d = STEP_PREVIEWS[n];
+  const scanFinished = n === 2 && furthestStep >= 3;
+  const li = (arr)=> arr.map(t=>`<li>${escapeHtml(t)}</li>`).join("");
+  const backLabel = STEPS[currentStep-1];
+  $("previewPanel").innerHTML = `
+    <div class="preview-status ${scanFinished ? "done" : ""}">
+      <span>${scanFinished ? "&#10003;" : "&#128274;"}</span>
+      <span>${scanFinished
+        ? "This scan already finished this session. Here's what the step does."
+        : `Preview only. Step ${n} unlocks when ${escapeHtml(d.unlock)}.`}</span>
+    </div>
+    <h2 class="serif">${escapeHtml(d.title)}</h2>
+    <p class="sub">${escapeHtml(d.sub)}</p>
+    <div class="preview-cols">
+      <div>
+        <div class="section-label">What happens here</div>
+        <ul class="preview-list">${li(d.does)}</ul>
+      </div>
+      <div>
+        <div class="section-label">What you'll need</div>
+        <ul class="preview-list">${li(d.needs)}</ul>
+      </div>
+    </div>
+    <div class="section-label" style="margin-top:20px;">What gets written or changed</div>
+    <p class="preview-list" style="list-style:none;padding:0;margin:0;">${escapeHtml(d.writes)}</p>
+    <div class="bundle-note" style="margin-top:20px;margin-bottom:0;"><span>&#9432;</span><span>No account, payment, or upload at any step. Everything runs in your browser and nothing leaves your device.</span></div>
+    <div class="footer-row split">
+      <button id="previewBackBtn" class="btn btn-ghost">&larr; Back to ${escapeHtml(backLabel)}</button>
+      <span></span>
+    </div>`;
+  $("previewBackBtn").addEventListener("click", ()=>{ goToStep(currentStep); });
+}
+function openStepPreview(n){
+  if(!STEP_PREVIEWS[n]) return;
+  previewStep = n;
+  for(let i=1;i<=5;i++) $("view"+i).classList.add("hidden");
+  $("viewPreview").classList.remove("hidden");
+  renderPreviewPanel(n);
+  renderRail();
+  // Give the browser's Back button something sensible to do (return to the real step) — but never
+  // while a scan/migration runs, since Back there means "stop it".
+  if(!activeOperation){
+    try{ history.pushState({step:currentStep}, "", location.href); }catch(e){}
+  }
   window.scrollTo({top:0, behavior:"smooth"});
 }
 // Every explicit in-app navigation (clicking Begin scan, finishing a scan, starting migration, ...)
